@@ -174,24 +174,36 @@
       uploadMany(e.target.files).then(function (keys) { if (keys.length) { r.src = keys[0]; mark(); } render(); });
     } });
 
+    var soundSel = h('select', { onchange: function (e) { if (e.target.value) p.sound = e.target.value; else delete p.sound; mark(); render(); } },
+      h('option', { value: '', text: 'Sem áudio' }),
+      mediaOptions(p.sound || '', 'audio').map(function (k) { return h('option', { value: k, selected: p.sound === k, text: k }); }));
+    var soundFile = h('input', { type: 'file', accept: 'audio/*', style: 'display:none', onchange: function (e) {
+      if (!e.target.files.length) return;
+      say('Enviando áudio...', 'dirty');
+      uploadMany(e.target.files).then(function (keys) { if (keys.length) { p.sound = keys[0]; mark(); } render(); });
+    } });
+
     return h('div', { class: 'card' },
       h('div', { class: 'row', style: 'justify-content:space-between' }, h('h3', { text: 'Pergunta ' + (pi + 1) }),
         h('div', { class: 'row' },
           h('button', { class: 'btn small', text: 'Subir', onclick: function () { move(-1); } }),
           h('button', { class: 'btn small', text: 'Descer', onclick: function () { move(1); } }),
           h('button', { class: 'btn small danger', text: 'Excluir', onclick: function () { if (confirm('Excluir esta pergunta?')) { quiz.questions.splice(pi, 1); mark(); render(); } } }))),
-      h('label', { class: 'lbl', text: 'Enunciado' }),
-      h('textarea', { oninput: function (e) { p.text = e.target.value; mark(); } }, p.text),
+      h('label', { class: 'lbl', text: 'Enunciado (pode ficar vazio nas perguntas de canto)' }),
+      h('textarea', { placeholder: 'Ex.: Que ave está cantando?', oninput: function (e) { p.text = e.target.value; mark(); } }, p.text),
+      h('label', { class: 'lbl', text: 'Áudio do canto (toca ao abrir a pergunta; deixe sem áudio para pergunta comum)' }),
+      h('div', { class: 'row' }, soundSel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar áudio', onclick: function () { soundFile.click(); } }), soundFile),
+      p.sound && urlOf(p.sound) ? h('div', { class: 'prev' }, h('audio', { src: urlOf(p.sound), controls: '' })) : null,
       h('label', { class: 'lbl', text: 'Alternativas (marque a correta)' }), opts,
       p.options.length < 6 ? h('button', { class: 'btn small', text: 'Adicionar alternativa', onclick: function () { p.options.push(''); mark(); render(); } }) : null,
-      h('label', { class: 'lbl', text: 'Prêmio ao acertar' }),
+      h('label', { class: 'lbl', text: 'Prêmio ao acertar (vídeo ou foto da resposta certa)' }),
       h('div', { class: 'row' }, sel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar novo arquivo', onclick: function () { file.click(); } }), file),
       preview(r.src),
       h('label', { class: 'lbl', text: 'Legenda (opcional)' }),
       h('input', { type: 'text', value: r.caption || '', placeholder: 'Ex.: Acertou! É o Dourado.', oninput: function (e) { r.caption = e.target.value; mark(); } }));
   }
-  function mediaOptions(current) {
-    var keys = S.media.map(function (m) { return m.key; });
+  function mediaOptions(current, type) {
+    var keys = S.media.map(function (m) { return m.key; }).filter(function (k) { return !type || typeOf(k) === type; });
     if (current && keys.indexOf(current) < 0) keys.unshift(current);
     return keys;
   }

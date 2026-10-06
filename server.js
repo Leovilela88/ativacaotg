@@ -41,7 +41,8 @@ function validateContent(c) {
     if (q.timeLimit != null && !(Number.isInteger(q.timeLimit) && q.timeLimit >= 5 && q.timeLimit <= 300)) return 'tempo por pergunta invalido em "' + q.title + '" (5 a 300 s)';
     if (q.lifelines) for (const k of ['skip', 'fifty']) if (q.lifelines[k] != null && !(Number.isInteger(q.lifelines[k]) && q.lifelines[k] >= 0 && q.lifelines[k] <= 9)) return 'ajudas invalidas em "' + q.title + '"';
     for (const p of q.questions) {
-      if (typeof p.text !== 'string' || !p.text.trim()) return 'pergunta sem texto em "' + q.title + '"';
+      if (p.sound != null && typeof p.sound !== 'string') return 'audio invalido em "' + q.title + '"';
+      if (typeof p.text !== 'string' || (!p.text.trim() && !p.sound)) return 'pergunta sem texto em "' + q.title + '"';
       if (!Array.isArray(p.options) || p.options.length < 2 || p.options.length > 8 || p.options.some((o) => typeof o !== 'string' || !o.trim())) return 'alternativas invalidas em "' + q.title + '"';
       if (!Number.isInteger(p.answer) || p.answer < 0 || p.answer >= p.options.length) return 'resposta certa invalida em "' + q.title + '"';
       if (p.reward && (!kinds.includes(p.reward.type) || (p.reward.src && typeof p.reward.src !== 'string'))) return 'premio invalido em "' + q.title + '"';

@@ -145,7 +145,7 @@
   }
 
   function question() {
-    var q = quiz.questions[qi], limit = limitMs(), paused = false, pauseAt = 0, done = false, t0 = 0;
+    var q = quiz.questions[qi], limit = limitMs(), paused = false, pauseAt = 0, done = false, t0 = 0, started = false;
     var hint = el('p', { class: 'hint' });
     var opts = el('div', { class: 'opts' }), btns = [];
     function say(t) { hint.textContent = t; hint.className = 'hint show'; }
@@ -159,6 +159,7 @@
       ]);
       b.addEventListener('click', function () {
         if (paused || done) return;
+        if (!started) { say('Ouça o canto para começar.'); return; }
         done = true;
         var elapsed = Math.min(limit, Date.now() - t0);
         spent += elapsed;
@@ -184,21 +185,55 @@
     });
     paintHelp();
 
-    var panel = el('div', { class: 'panel' }, [
+    var title = q.text || (q.sound ? 'Quem está cantando?' : '');
+    var panelKids = [
       el('p', { class: 'eyebrow', text: 'Pergunta ' + (qi + 1) + ' de ' + quiz.questions.length }),
-      el('h2', { class: q.text.length > 150 ? 'long' : '', text: q.text })
-    ]);
+      el('h2', { class: title.length > 150 ? 'long' : '', text: title })
+    ];
+
+    // Pergunta de canto: o som toca ao abrir; o relogio so comeca quando ele realmente toca.
+    var audio = null, eq = null, listenB = null, blocked = false;
+    if (q.sound) {
+      audio = el('audio', { src: mediaUrl(q.sound), preload: 'auto' });
+      eq = el('div', { class: 'eq' }, [el('i'), el('i'), el('i'), el('i'), el('i'), el('i'), el('i')]);
+      listenB = el('button', { class: 'help', text: 'Ouvir novamente' });
+      listenB.addEventListener('click', function () {
+        if (paused || done) return;
+        try { audio.currentTime = 0; } catch (e) {}
+        var pr = audio.play(); if (pr && pr.catch) pr.catch(function () {});
+      });
+      panelKids.push(el('div', { class: 'sound' }, [eq, listenB, audio]));
+    }
+    var panel = el('div', { class: 'panel' }, panelKids);
     render([top(true), clock, panel, opts, hint, el('div', { class: 'helps' }, [fiftyB])], -1);
 
-    t0 = Date.now();
-    tick = setInterval(function () {
-      if (paused || done) return;
-      var left = Math.max(0, limit - (Date.now() - t0)), r = left / limit;
-      bar.style.width = (r * 100) + '%';
-      secs.textContent = String(Math.ceil(left / 1000));
-      clock.className = 'clock' + (r < 0.25 ? ' low' : '');
-      if (left <= 0) { done = true; clearInterval(tick); spent += limit; miss(q, 'time'); }
-    }, 100);
+    function startClock() {
+      if (started) return;
+      started = true; hint.className = 'hint';
+      t0 = Date.now();
+      tick = setInterval(function () {
+        if (paused || done) return;
+        var left = Math.max(0, limit - (Date.now() - t0)), r = left / limit;
+        bar.style.width = (r * 100) + '%';
+        secs.textContent = String(Math.ceil(left / 1000));
+        clock.className = 'clock' + (r < 0.25 ? ' low' : '');
+        if (left <= 0) { done = true; clearInterval(tick); spent += limit; miss(q, 'time'); }
+      }, 100);
+    }
+
+    if (!audio) { startClock(); return; }
+    audio.addEventListener('playing', function () { eq.className = 'eq on'; startClock(); });
+    audio.addEventListener('pause', function () { eq.className = 'eq'; });
+    audio.addEventListener('ended', function () { eq.className = 'eq'; });
+    audio.addEventListener('error', function () { listenB.disabled = true; say('Não foi possível tocar o áudio.'); startClock(); });
+    var pr = audio.play();
+    if (pr && pr.catch) pr.catch(function () {            // navegador bloqueou o som automatico
+      blocked = true; listenB.textContent = 'Toque para ouvir'; say('Toque em “Toque para ouvir” para começar.');
+      try { listenB.focus(); } catch (e) {}
+    });
+    setTimeout(function () { if (!started && !blocked && tokOk()) startClock(); }, 12000);   // rede muito lenta: nao trava a partida
+    var myTok = screenToken;
+    function tokOk() { return myTok === screenToken; }
   }
 
   // Sorteio visivel: so o NUMERO de alternativas eliminadas (1 a 3). Quando o numero para,
