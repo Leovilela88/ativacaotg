@@ -13,9 +13,10 @@ Tipos de prêmio: `image`, `video`, `audio`, `text`. Prefira vídeo MP4 (H.264/A
 ## Deploy (Railway)
 Conecte o repositório no Railway; ele detecta Node e executa `npm start`. Healthcheck em `/health`.
 
-## Midias no Cloudflare R2
-1. Crie um bucket no R2 e habilite acesso publico (dominio proprio ou `r2.dev`).
-2. Envie fotos/videos/sons pelo painel da Cloudflare.
-3. No Railway, defina a variavel `MEDIA_BASE_URL` com o endereco publico do bucket (sem barra no fim).
-4. No `public/data/quiz.json`, use so o nome do arquivo: `"src": "video1.mp4"`.
-Sem `MEDIA_BASE_URL`, o app le de `public/media/`.
+## Admin (/admin)
+Painel protegido por senha para editar quizzes, perguntas e prêmios e para subir fotos, vídeos e sons.
+O conteúdo editado fica no bucket R2 (`_data/quiz.json`), então sobrevive aos deploys.
+Sem as variáveis do R2, o site público usa `public/data/quiz.json` como padrão.
+
+Variáveis no Railway (veja `.env.example`): `ADMIN_PASSWORD`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+`R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `MEDIA_BASE_URL`.
