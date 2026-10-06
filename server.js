@@ -37,6 +37,7 @@ function validateContent(c) {
   for (const q of c.quizzes) {
     if (typeof q.id !== 'string' || typeof q.title !== 'string' || !q.title.trim()) return 'todo quiz precisa de titulo';
     if (!Array.isArray(q.questions)) return 'quiz sem lista de perguntas';
+    if (q.lifelines) for (const k of ['skip', 'fifty']) if (q.lifelines[k] != null && !(Number.isInteger(q.lifelines[k]) && q.lifelines[k] >= 0 && q.lifelines[k] <= 9)) return 'ajudas invalidas em "' + q.title + '"';
     for (const p of q.questions) {
       if (typeof p.text !== 'string' || !p.text.trim()) return 'pergunta sem texto em "' + q.title + '"';
       if (!Array.isArray(p.options) || p.options.length < 2 || p.options.length > 8 || p.options.some((o) => typeof o !== 'string' || !o.trim())) return 'alternativas invalidas em "' + q.title + '"';

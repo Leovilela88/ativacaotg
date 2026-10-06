@@ -120,6 +120,9 @@
       h('input', { type: 'text', value: quiz.title, oninput: function (e) { quiz.title = e.target.value; mark(); } }),
       h('label', { class: 'lbl', text: 'Subtítulo' }),
       h('input', { type: 'text', value: quiz.subtitle || '', oninput: function (e) { quiz.subtitle = e.target.value; mark(); } }),
+      h('label', { class: 'lbl', text: 'Ajudas por partida' }),
+      h('div', { class: 'row' },
+        lifeField(quiz, 'skip', 'Pular'), lifeField(quiz, 'fifty', 'Eliminar alternativas')),
       h('div', { style: 'margin-top:14px' }, h('button', { class: 'btn danger small', text: 'Excluir este quiz', onclick: function () {
         if (confirm('Excluir o quiz "' + quiz.title + '" e todas as suas perguntas?')) { c.quizzes.splice(S.qi, 1); mark(); render(); }
       } })));
@@ -129,6 +132,15 @@
       quiz.questions.push({ text: '', options: ['', '', '', ''], answer: 0, reward: { src: '', caption: '' } }); mark(); render(); window.scrollTo(0, document.body.scrollHeight);
     } });
     return h('div', { class: 'layout' }, side, h('div', {}, head, cards, add));
+  }
+
+  function lifeField(quiz, key, label) {
+    var cur = quiz.lifelines && quiz.lifelines[key] != null ? quiz.lifelines[key] : 1;
+    return h('label', { class: 'row', style: 'flex:1' }, h('span', { class: 'hint', style: 'white-space:nowrap', text: label }),
+      h('input', { type: 'number', min: '0', max: '9', value: String(cur), style: 'width:80px', oninput: function (e) {
+        var n = Math.max(0, Math.min(9, parseInt(e.target.value, 10) || 0));
+        quiz.lifelines = quiz.lifelines || { skip: 1, fifty: 1 }; quiz.lifelines[key] = n; mark();
+      } }));
   }
 
   function questionCard(quiz, p, pi) {

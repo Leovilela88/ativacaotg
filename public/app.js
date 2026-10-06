@@ -2,7 +2,7 @@
 // ES5-friendly (sem módulos/optional chaining) para rodar em navegadores antigos de TV.
 (function () {
   var app = document.getElementById('app');
-  var data = null, quiz = null, qi = 0, score = 0, idleTimer = null;
+  var data = null, quiz = null, qi = 0, score = 0, idleTimer = null, order = [], life = { skip: 0, fifty: 0 };
 
   // ---------- helpers ----------
   // Midias: se MEDIA_BASE_URL (bucket R2) estiver definida, "video1.mp4" vira "<bucket>/video1.mp4".
@@ -72,12 +72,19 @@
       cards
     ]);
   }
-  function start(q) { quiz = q; qi = 0; score = 0; question(); }
+  function start(q) {
+    quiz = q; qi = 0; score = 0;
+    order = q.questions.map(function (x, i) { return i; });
+    var l = q.lifelines || {};
+    life = { skip: l.skip == null ? 1 : l.skip, fifty: l.fifty == null ? 1 : l.fifty };
+    question();
+  }
 
   function question() {
-    var q = quiz.questions[qi], tries = 0;
+    var q = quiz.questions[order[qi]], tries = 0;
     var hint = el('p', { class: 'hint' });
-    var opts = el('div', { class: 'opts' });
+    var opts = el('div', { class: 'opts' }), btns = [];
+    function say(t) { hint.textContent = t; hint.className = 'hint show'; }
     q.options.forEach(function (label, i) {
       var b = el('button', {}, [
         el('span', { class: 'badge', text: String.fromCharCode(65 + i) }),
@@ -85,15 +92,41 @@
       ]);
       b.addEventListener('click', function () {
         if (i === q.answer) { if (tries === 0) score++; reward(q); }
-        else { tries++; b.className = 'wrong'; b.disabled = true; b.blur(); hint.textContent = 'Quase! Tente outra alternativa.'; hint.className = 'hint show'; focusFirst(opts); }
+        else { tries++; b.className = 'wrong'; b.disabled = true; b.blur(); say('Quase! Tente outra alternativa.'); focusFirst(opts); }
       });
-      opts.appendChild(b);
+      btns.push(b); opts.appendChild(b);
     });
+
+    // ----- ajudas -----
+    var last = qi >= quiz.questions.length - 1;
+    var skipB = el('button', { class: 'help' }), fiftyB = el('button', { class: 'help' });
+    function paintHelps() {
+      skipB.innerHTML = 'Pular <span class="count">' + life.skip + '</span>';
+      fiftyB.innerHTML = 'Eliminar alternativas <span class="count">' + life.fifty + '</span>';
+      skipB.disabled = life.skip < 1 || last;
+      fiftyB.disabled = life.fifty < 1;
+    }
+    skipB.addEventListener('click', function () {
+      life.skip--; order.push(order.splice(qi, 1)[0]); question();
+    });
+    fiftyB.addEventListener('click', function () {
+      var wrong = btns.filter(function (b, i) { return i !== q.answer && !b.disabled; });
+      if (wrong.length < 2) { say('Não há mais alternativas para eliminar.'); return; }
+      var n = Math.max(1, Math.floor(wrong.length / 2));
+      for (var k = 0; k < n; k++) {
+        var j = Math.floor(Math.random() * wrong.length), b = wrong.splice(j, 1)[0];
+        b.className = 'gone'; b.disabled = true;
+      }
+      life.fifty--; paintHelps(); focusFirst(opts);
+    });
+    paintHelps();
+    var helps = el('div', { class: 'helps' }, [skipB, fiftyB]);
+
     var panel = el('div', { class: 'panel' }, [
       el('p', { class: 'eyebrow', text: 'Pergunta ' + (qi + 1) + ' de ' + quiz.questions.length }),
       el('h2', { class: q.text.length > 150 ? 'long' : '', text: q.text })
     ]);
-    render([top(true), panel, opts, hint]);
+    render([top(true), panel, opts, hint, helps]);
   }
   function focusFirst(c) { var b = c.querySelector('button:not([disabled])'); if (b) b.focus(); }
 
