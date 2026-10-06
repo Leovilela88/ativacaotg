@@ -246,7 +246,15 @@
   function loadRank() {
     var q = S.content.quizzes[S.rq || 0];
     if (!q) { S.rank = []; return Promise.resolve(); }
-    return api('GET', '/api/ranking?quizId=' + encodeURIComponent(q.id) + '&limit=300').then(function (j) { S.rank = (j.ranking || {})[q.id] || []; }).catch(function () { S.rank = []; });
+    return api('GET', '/api/admin/ranking?quizId=' + encodeURIComponent(q.id)).then(function (j) { S.rank = j.entries || []; }).catch(function () { S.rank = []; });
+  }
+  function downloadCsv(qz) {
+    var rows = [['posicao', 'nome', 'pontos', 'acertos', 'total_perguntas', 'tempo_segundos', 'data']];
+    (S.rank || []).forEach(function (e, i) { rows.push([i + 1, e.name, e.points, e.correct, e.total, (e.ms / 1000).toFixed(1), new Date(e.at).toLocaleString('pt-BR')]); });
+    var csv = '\ufeff' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = 'ranking-' + qz.id + '.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
   function viewRanking() {
     var c = S.content, qz = c.quizzes[S.rq || 0];
@@ -255,6 +263,7 @@
       c.quizzes.map(function (q, i) { return h('option', { value: String(i), selected: i === (S.rq || 0), text: q.title }); }));
     var head = h('div', { class: 'row', style: 'justify-content:space-between;margin-bottom:14px' }, sel,
       h('div', { class: 'row' },
+        h('button', { class: 'btn small', text: 'Baixar CSV', onclick: function () { downloadCsv(qz); } }),
         h('button', { class: 'btn small', text: 'Atualizar', onclick: function () { S.rank = null; render(); loadRank().then(render); } }),
         h('button', { class: 'btn small danger', text: 'Limpar ranking', onclick: function () {
           if (!confirm('Apagar TODO o ranking de "' + qz.title + '"? Isso não pode ser desfeito.')) return;

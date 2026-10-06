@@ -3,7 +3,7 @@
 (function () {
   var app = document.getElementById('app');
   var data = null, quiz = null, qi = 0, correct = 0, pts = 0, spent = 0, fifty = 0;
-  var player = '', idleTimer = null, tick = null, onKey = null, lastQuiz = null;
+  var player = '', idleTimer = null, tick = null, onKey = null, screenToken = 0;
 
   // ---------- helpers ----------
   // Midias: se MEDIA_BASE_URL (bucket R2) estiver definida, "video1.mp4" vira "<bucket>/video1.mp4".
@@ -24,11 +24,14 @@
     (children || []).forEach(function (c) { n.appendChild(c); });
     return n;
   }
+  // focusIdx: indice do botao que ja nasce selecionado; -1 = nenhum (a 1a seta do controle seleciona o primeiro).
   function render(nodes, focusIdx) {
-    clearInterval(tick); onKey = null; stopMedia();
+    clearInterval(tick); onKey = null; screenToken++; stopMedia();
     app.innerHTML = '';
     nodes.forEach(function (n) { app.appendChild(n); });
     app.scrollTop = 0;
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    if (focusIdx === -1) return;
     var btns = app.querySelectorAll('button:not([disabled])');
     if (btns.length) btns[Math.min(focusIdx || 0, btns.length - 1)].focus();
   }
@@ -57,12 +60,9 @@
   ['keydown', 'click', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, bumpIdle, true); });
 
   // ---------- pontuação ----------
-  // 100 a 1000 pontos conforme o tempo que sobrou; cada erro e o uso de "Eliminar" cortam pela metade.
-  function calcPoints(left, limit, wrongTries, usedFifty) {
-    var p = 100 + 900 * (left / limit);
-    for (var i = 0; i < wrongTries; i++) p /= 2;
-    if (usedFifty) p /= 2;
-    return Math.max(10, Math.round(p));
+  // 10 a 100 pontos conforme o tempo que sobrou. Errou ou acabou o tempo: 0.
+  function calcPoints(left, limit) {
+    return Math.max(10, Math.round(10 + 90 * (left / limit)));
   }
   function limitMs() { return ((quiz && quiz.timeLimit) || 30) * 1000; }
 
@@ -100,7 +100,7 @@
 
   // Nome do jogador com teclado na tela (toque e controle remoto); teclado físico também funciona.
   function nameScreen(q) {
-    quiz = q; lastQuiz = q;
+    quiz = q;
     var name = player || '';
     var disp = el('div', { class: 'namebox' });
     var startB = el('button', { class: 'go', text: 'Começar' });
@@ -145,10 +145,10 @@
   }
 
   function question() {
-    var q = quiz.questions[qi], tries = 0, usedFifty = false, limit = limitMs();
+    var q = quiz.questions[qi], limit = limitMs(), paused = false, pauseAt = 0, done = false, t0 = 0;
     var hint = el('p', { class: 'hint' });
     var opts = el('div', { class: 'opts' }), btns = [];
-    function say(t, info) { hint.textContent = t; hint.className = 'hint show' + (info ? ' info' : ''); }
+    function say(t) { hint.textContent = t; hint.className = 'hint show'; }
     var bar = el('i'), secs = el('b', { text: String(Math.ceil(limit / 1000)) });
     var clock = el('div', { class: 'clock' }, [el('div', { class: 'cbar' }, [bar]), secs]);
 
@@ -158,12 +158,12 @@
         el('span', { class: 'label', text: label })
       ]);
       b.addEventListener('click', function () {
-        if (i === q.answer) {
-          var elapsed = Math.min(limit, Date.now() - t0), left = limit - elapsed;
-          var p = calcPoints(left, limit, tries, usedFifty);
-          pts += p; spent += elapsed; correct++;
-          reward(q, p);
-        } else { tries++; b.className = 'wrong'; b.disabled = true; b.blur(); say('Quase! Tente outra alternativa.'); focusFirst(opts); }
+        if (paused || done) return;
+        done = true;
+        var elapsed = Math.min(limit, Date.now() - t0);
+        spent += elapsed;
+        if (i === q.answer) { var p = calcPoints(limit - elapsed, limit); pts += p; correct++; reward(q, p); }
+        else miss(q, 'wrong');
       });
       btns.push(b); opts.appendChild(b);
     });
@@ -174,11 +174,15 @@
       fiftyB.disabled = fifty < 1;
     }
     fiftyB.addEventListener('click', function () {
-      var wrong = btns.filter(function (b, i) { return i !== q.answer && !b.disabled; });
-      if (wrong.length < 2) { say('Não há mais alternativas para eliminar.'); return; }
-      var n = Math.max(1, Math.floor(wrong.length / 2));
-      for (var k = 0; k < n; k++) { var j = Math.floor(Math.random() * wrong.length), b = wrong.splice(j, 1)[0]; b.className = 'gone'; b.disabled = true; }
-      fifty--; usedFifty = true; paintHelp(); say('Eliminar vale metade dos pontos desta pergunta.', true); focusFirst(opts);
+      if (paused || done) return;
+      var cand = [];
+      btns.forEach(function (b, i) { if (i !== q.answer && !b.disabled) cand.push(i); });
+      if (cand.length < 2) { say('Não há mais alternativas para eliminar.'); return; }
+      var n = Math.max(1, Math.floor(cand.length / 2)), picks = [];
+      for (var k = 0; k < n; k++) picks.push(cand.splice(Math.floor(Math.random() * cand.length), 1)[0]);
+      fifty--; paintHelp();
+      paused = true; pauseAt = Date.now();           // o relógio para durante o sorteio
+      runDraw(btns, picks, function () { paused = false; t0 += Date.now() - pauseAt; });
     });
     paintHelp();
 
@@ -186,17 +190,61 @@
       el('p', { class: 'eyebrow', text: 'Pergunta ' + (qi + 1) + ' de ' + quiz.questions.length }),
       el('h2', { class: q.text.length > 150 ? 'long' : '', text: q.text })
     ]);
-    render([top(true), clock, panel, opts, hint, el('div', { class: 'helps' }, [fiftyB])]);
+    render([top(true), clock, panel, opts, hint, el('div', { class: 'helps' }, [fiftyB])], -1);
 
-    var t0 = Date.now();
+    t0 = Date.now();
     tick = setInterval(function () {
+      if (paused || done) return;
       var left = Math.max(0, limit - (Date.now() - t0)), r = left / limit;
       bar.style.width = (r * 100) + '%';
       secs.textContent = String(Math.ceil(left / 1000));
       clock.className = 'clock' + (r < 0.25 ? ' low' : '');
-      if (left <= 0) { clearInterval(tick); timeUp(q); }
+      if (left <= 0) { done = true; clearInterval(tick); spent += limit; miss(q, 'time'); }
     }, 100);
   }
+
+  // Sorteio visivel das alternativas eliminadas: o "tambor" gira por TODAS as letras restantes
+  // (inclusive a certa, para nao entregar a resposta) e para numa errada.
+  function runDraw(btns, picks, onDone) {
+    var tok = screenToken, idx = 0;
+    var letter = el('b', { text: '?' }), msg = el('p', { class: 'dtxt' });
+    var drum = el('div', { class: 'drum' }, [letter]), chips = el('div', { class: 'chips' });
+    var ov = el('div', { class: 'draw' }, [el('div', { class: 'dbox' }, [el('p', { class: 'eyebrow', text: 'Sorteio' }), drum, chips, msg])]);
+    app.appendChild(ov);
+    function L(i) { return String.fromCharCode(65 + i); }
+    function drawOne() {
+      if (tok !== screenToken) return;
+      if (idx >= picks.length) { if (ov.parentNode) ov.parentNode.removeChild(ov); onDone(); return; }
+      var target = picks[idx++], pool = [];
+      btns.forEach(function (b, i) { if (!b.disabled) pool.push(i); });
+      chips.innerHTML = '';
+      var chipEls = pool.map(function (i) { var c = el('span', { class: 'chip2', text: L(i) }); chips.appendChild(c); return c; });
+      drum.className = 'drum';
+      msg.textContent = picks.length > 1 ? 'Sorteio ' + idx + ' de ' + picks.length : 'Sorteando a alternativa a eliminar';
+      var steps = 11 + Math.floor(Math.random() * 4), seq = [], start = Math.floor(Math.random() * pool.length);
+      for (var s = 0; s < steps; s++) seq.push(pool[(start + s) % pool.length]);
+      seq[steps - 1] = target;
+      if (seq[steps - 2] === target) seq[steps - 2] = pool[(pool.indexOf(target) + 1) % pool.length];
+      var n = 0;
+      (function step() {
+        if (tok !== screenToken) return;
+        var cur = seq[n];
+        letter.textContent = L(cur);
+        chipEls.forEach(function (c, k) { c.className = 'chip2' + (pool[k] === cur ? ' on' : ''); });
+        n++;
+        if (n < seq.length) { setTimeout(step, 70 * Math.pow(1.12, n)); return; }
+        drum.className = 'drum stop';
+        msg.textContent = 'Alternativa ' + L(target) + ' eliminada';
+        setTimeout(function () {
+          if (tok !== screenToken) return;
+          btns[target].className = 'gone'; btns[target].disabled = true;
+          setTimeout(drawOne, 600);
+        }, 1000);
+      })();
+    }
+    drawOne();
+  }
+
   function focusFirst(c) { var b = c.querySelector('button:not([disabled])'); if (b) b.focus(); }
 
   function nextBtn() {
@@ -204,12 +252,15 @@
     return el('button', { text: last ? 'Ver resultado' : 'Próxima pergunta', onclick: function () { if (last) end(); else { qi++; question(); } } });
   }
 
-  function timeUp(q) {
-    spent += limitMs();
-    var clockIco = svg('<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>');
-    clockIco.className = 'tick bad';
+  // Errou ou o tempo acabou: 0 pontos, mostra a certa e segue (sem segunda chance).
+  function miss(q, kind) {
+    var time = kind === 'time';
+    var ico = svg(time
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>');
+    ico.className = 'tick bad';
     render([
-      top(true), clockIco, el('p', { class: 'eyebrow bad', text: 'Tempo esgotado' }),
+      top(true), ico, el('p', { class: 'eyebrow bad', text: time ? 'Tempo esgotado' : 'Resposta incorreta' }),
       el('p', { class: 'pts', text: '+ 0 pontos' }),
       el('div', { class: 'reveal' }, [el('small', { text: 'A resposta certa era' }), el('b', { text: String.fromCharCode(65 + q.answer) + '. ' + q.options[q.answer] })]),
       el('div', { class: 'actions' }, [nextBtn()])
@@ -246,8 +297,7 @@
       el('h1', { text: fmt(pts) + ' pontos' }), rankLine,
       el('div', { class: 'actions' }, [
         rankBtn,
-        el('button', { text: 'Jogar de novo', onclick: function () { quiz = thisQuiz; startGame(); } }),
-        el('button', { text: 'Outros quizzes', onclick: home })
+        el('button', { text: 'Voltar ao início', onclick: home })
       ])
     ], 0);
     setTimeout(function () { var b = ring.querySelector('.bar'); if (b) b.style.strokeDashoffset = String(326.7 * (1 - ratio)); }, 120);

@@ -73,7 +73,7 @@ const clientIp = (req) => (req.headers['x-forwarded-for'] || req.socket.remoteAd
 async function publicApi(req, res, rel, url) {
   if (rel === '/api/ranking' && req.method === 'GET') {
     const content = JSON.parse(await publicContent());
-    const limit = Math.min(300, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 10));
+    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 10));
     const only = url.searchParams.get('quizId');
     const out = {};
     for (const q of content.quizzes) if (!only || q.id === only) out[q.id] = await ranking.top(q.id, limit);
@@ -88,7 +88,7 @@ async function publicApi(req, res, rel, url) {
     const name = ranking.cleanName(b.name);
     const n = quiz ? quiz.questions.length : 0;
     const ok = quiz && name && [b.points, b.correct, b.total, b.ms].every(Number.isInteger)
-      && b.total === n && b.correct >= 0 && b.correct <= n && b.points >= 0 && b.points <= 1000 * n && b.ms >= 0 && b.ms <= 86400000;
+      && b.total === n && b.correct >= 0 && b.correct <= n && b.points >= 0 && b.points <= 100 * n && b.ms >= 0 && b.ms <= 86400000;
     if (!ok) { sendJson(res, 400, { error: 'pontuacao invalida' }); return true; }
     sendJson(res, 200, await ranking.add(quiz.id, { name, points: b.points, correct: b.correct, total: b.total, ms: b.ms }));
     return true;
@@ -119,6 +119,9 @@ async function api(req, res, rel, url) {
     return sendJson(res, 200, { r2: s.ok, missing: s.missing, mediaBase: (process.env.MEDIA_BASE_URL || '').replace(/\/+$/, '') });
   }
 
+  if (rel === '/api/admin/ranking' && req.method === 'GET') {
+    return sendJson(res, 200, { entries: await ranking.top(url.searchParams.get('quizId') || '', 5000) });
+  }
   if (rel === '/api/ranking' && req.method === 'DELETE') {
     const quizId = url.searchParams.get('quizId') || '';
     if (url.searchParams.get('all')) await ranking.clear(quizId); else await ranking.remove(quizId, url.searchParams.get('id') || '');
