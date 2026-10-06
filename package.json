@@ -1,0 +1,8 @@
+{
+  "name": "ativacaotg",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ativação interativa da marca Terra da Gente (quizzes com prêmios em mídia)",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

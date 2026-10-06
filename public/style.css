@@ -1,0 +1,26 @@
+/* Layout fluido: base em vw/vh para funcionar de TV 1080p a celular. Sem hover, foco visível grande. */
+:root { --bg:#0e2a1a; --card:#16402a; --fg:#fff; --accent:#f5b82e; --ok:#3ecf6e; --bad:#e5533d; }
+* { box-sizing: border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+  font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; overflow:hidden; }
+#app { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:4vmin 6vmin; text-align:center; }
+h1 { font-size:6vmin; margin:0 0 2vmin; }
+h2 { font-size:5vmin; margin:0 0 4vmin; line-height:1.2; max-width:90vw; }
+p.sub { font-size:2.8vmin; opacity:.8; margin:0 0 4vmin; }
+.meta { position:absolute; top:3vmin; left:4vmin; right:4vmin; display:flex; justify-content:space-between;
+  font-size:2.6vmin; opacity:.8; }
+.grid { display:flex; flex-wrap:wrap; gap:2.5vmin; justify-content:center; width:100%; max-width:90vw; }
+button { font:inherit; color:var(--fg); background:var(--card); border:.5vmin solid transparent; border-radius:2vmin;
+  padding:2.4vmin 4vmin; font-size:3.4vmin; cursor:pointer; min-width:30vmin; }
+.opts button { flex:1 1 40%; }
+button:focus { outline:none; border-color:var(--accent); transform:scale(1.05); box-shadow:0 0 4vmin rgba(245,184,46,.5); }
+button.wrong { background:var(--bad); opacity:.55; }
+button.right { background:var(--ok); }
+button:disabled { cursor:default; }
+.reward { display:flex; flex-direction:column; align-items:center; gap:3vmin; width:100%; }
+.reward img, .reward video { max-width:84vw; max-height:56vh; border-radius:2vmin; background:#000; }
+.reward audio { width:60vw; }
+.reward .cap { font-size:3.6vmin; }
+.ok { color:var(--ok); } .bad { color:var(--bad); }
+.big { font-size:12vmin; margin:0; }

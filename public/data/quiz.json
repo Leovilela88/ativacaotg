@@ -1,0 +1,43 @@
+{
+  "idleSeconds": 60,
+  "quizzes": [
+    {
+      "id": "sabores",
+      "title": "Sabores da Terra",
+      "subtitle": "Teste o que você sabe sobre a nossa terra",
+      "questions": [
+        {
+          "text": "Pergunta de exemplo 1: qual é a resposta certa?",
+          "options": ["Opção A", "Opção B (certa)", "Opção C", "Opção D"],
+          "answer": 1,
+          "reward": { "type": "image", "src": "media/exemplo.jpg", "caption": "Acertou! Aqui vai um prêmio em foto." }
+        },
+        {
+          "text": "Pergunta de exemplo 2: qual é a resposta certa?",
+          "options": ["Opção A (certa)", "Opção B", "Opção C"],
+          "answer": 0,
+          "reward": { "type": "video", "src": "media/exemplo.mp4", "caption": "Acertou! Assista ao vídeo." }
+        },
+        {
+          "text": "Pergunta de exemplo 3: qual é a resposta certa?",
+          "options": ["Opção A", "Opção B", "Opção C (certa)"],
+          "answer": 2,
+          "reward": { "type": "audio", "src": "media/exemplo.mp3", "caption": "Acertou! Ouça o som." }
+        }
+      ]
+    },
+    {
+      "id": "pessoas",
+      "title": "Gente que faz",
+      "subtitle": "Conheça quem faz a Terra da Gente",
+      "questions": [
+        {
+          "text": "Outra pergunta de exemplo?",
+          "options": ["Sim (certa)", "Não"],
+          "answer": 0,
+          "reward": { "type": "text", "caption": "Acertou! Prêmio só com texto." }
+        }
+      ]
+    }
+  ]
+}
