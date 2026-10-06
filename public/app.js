@@ -178,11 +178,9 @@
       var cand = [];
       btns.forEach(function (b, i) { if (i !== q.answer && !b.disabled) cand.push(i); });
       if (cand.length < 2) { say('Não há mais alternativas para eliminar.'); return; }
-      var n = Math.max(1, Math.floor(cand.length / 2)), picks = [];
-      for (var k = 0; k < n; k++) picks.push(cand.splice(Math.floor(Math.random() * cand.length), 1)[0]);
       fifty--; paintHelp();
       paused = true; pauseAt = Date.now();           // o relógio para durante o sorteio
-      runDraw(btns, picks, function () { paused = false; t0 += Date.now() - pauseAt; });
+      runDraw(btns, cand, Math.min(3, cand.length), function () { paused = false; t0 += Date.now() - pauseAt; });
     });
     paintHelp();
 
@@ -203,25 +201,24 @@
     }, 100);
   }
 
-  // Sorteio visivel das alternativas eliminadas: o "tambor" gira por TODAS as letras restantes
-  // (inclusive a certa, para nao entregar a resposta) e para numa errada.
-  function runDraw(btns, picks, onDone) {
-    var tok = screenToken, idx = 0;
+  // Sorteio visivel em duas etapas: 1) quantas alternativas saem (1 a 3); 2) quais saem, uma a uma.
+  // O "tambor" gira por TODAS as letras restantes (inclusive a certa, para nao entregar a resposta)
+  // e sempre para numa errada.
+  function runDraw(btns, cand, maxN, onDone) {
+    var tok = screenToken, idx = 0, picks = [];
     var letter = el('b', { text: '?' }), msg = el('p', { class: 'dtxt' });
     var drum = el('div', { class: 'drum' }, [letter]), chips = el('div', { class: 'chips' });
     var ov = el('div', { class: 'draw' }, [el('div', { class: 'dbox' }, [el('p', { class: 'eyebrow', text: 'Sorteio' }), drum, chips, msg])]);
     app.appendChild(ov);
     function L(i) { return String.fromCharCode(65 + i); }
-    function drawOne() {
-      if (tok !== screenToken) return;
-      if (idx >= picks.length) { if (ov.parentNode) ov.parentNode.removeChild(ov); onDone(); return; }
-      var target = picks[idx++], pool = [];
-      btns.forEach(function (b, i) { if (!b.disabled) pool.push(i); });
+    function rnd(n) { return Math.floor(Math.random() * n); }
+
+    // Gira por "pool" (valores) e para em "target". "cls" e o estilo final do tambor.
+    function spin(pool, target, label, cls, landed) {
       chips.innerHTML = '';
-      var chipEls = pool.map(function (i) { var c = el('span', { class: 'chip2', text: L(i) }); chips.appendChild(c); return c; });
+      var chipEls = pool.map(function (v) { var c = el('span', { class: 'chip2', text: label(v) }); chips.appendChild(c); return c; });
       drum.className = 'drum';
-      msg.textContent = picks.length > 1 ? 'Sorteio ' + idx + ' de ' + picks.length : 'Sorteando a alternativa a eliminar';
-      var steps = 11 + Math.floor(Math.random() * 4), seq = [], start = Math.floor(Math.random() * pool.length);
+      var steps = 11 + rnd(4), seq = [], start = rnd(pool.length);
       for (var s = 0; s < steps; s++) seq.push(pool[(start + s) % pool.length]);
       seq[steps - 1] = target;
       if (seq[steps - 2] === target) seq[steps - 2] = pool[(pool.indexOf(target) + 1) % pool.length];
@@ -229,20 +226,46 @@
       (function step() {
         if (tok !== screenToken) return;
         var cur = seq[n];
-        letter.textContent = L(cur);
+        letter.textContent = label(cur);
         chipEls.forEach(function (c, k) { c.className = 'chip2' + (pool[k] === cur ? ' on' : ''); });
         n++;
         if (n < seq.length) { setTimeout(step, 70 * Math.pow(1.12, n)); return; }
-        drum.className = 'drum stop';
+        drum.className = 'drum ' + cls;
+        landed();
+      })();
+    }
+
+    function drawOne() {
+      if (tok !== screenToken) return;
+      if (idx >= picks.length) { if (ov.parentNode) ov.parentNode.removeChild(ov); onDone(); return; }
+      var target = picks[idx++], pool = [];
+      btns.forEach(function (b, i) { if (!b.disabled) pool.push(i); });
+      msg.textContent = 'Alternativa ' + idx + ' de ' + picks.length;
+      spin(pool, target, L, 'stop', function () {
         msg.textContent = 'Alternativa ' + L(target) + ' eliminada';
         setTimeout(function () {
           if (tok !== screenToken) return;
           btns[target].className = 'gone'; btns[target].disabled = true;
           setTimeout(drawOne, 600);
         }, 1000);
-      })();
+      });
     }
-    drawOne();
+
+    function begin(count) {
+      var pool = cand.slice(), k = 0;
+      while (k < count) { picks.push(pool.splice(rnd(pool.length), 1)[0]); k++; }
+      drawOne();
+    }
+
+    if (maxN > 1) {
+      var nums = [], count = 1 + rnd(maxN);
+      for (var i = 1; i <= maxN; i++) nums.push(i);
+      msg.textContent = 'Sorteando quantas alternativas serão eliminadas';
+      spin(nums, count, String, 'stop ok', function () {
+        msg.textContent = count === 1 ? 'Será eliminada 1 alternativa' : 'Serão eliminadas ' + count + ' alternativas';
+        setTimeout(function () { if (tok === screenToken) begin(count); }, 1400);
+      });
+    } else begin(1);
   }
 
   function focusFirst(c) { var b = c.querySelector('button:not([disabled])'); if (b) b.focus(); }
