@@ -201,3 +201,21 @@ button.ghost { padding: 1.8vmin 4vmin; justify-content: center; font-size: 2.3vm
 .dtxt { margin: 0; font-size: 3.2vmin; font-weight: 500; letter-spacing: .04em; }
 .drum.stop.ok { border-color: var(--lime); background: radial-gradient(circle, rgba(198, 244, 50, .28), rgba(4, 20, 11, .85)); box-shadow: 0 0 7vmin rgba(198, 244, 50, .55); }
 .drum.stop.ok b { color: var(--lime); }
+
+/* ---------- tela de acerto: midia a esquerda, informacoes a direita ---------- */
+.rwd { display: flex; align-items: center; justify-content: center; width: 100%; }
+.rwd-media { flex: 0 1 auto; margin-right: 6vmin; }
+.rwd-media video, .rwd-media img { display: block; max-height: calc(100vh - 22vmin); max-width: 44vw; border-radius: 2.6vmin; background: #000;
+  border: .25vmin solid rgba(255, 255, 255, .28); box-shadow: 0 2.4vmin 7vmin rgba(0, 0, 0, .6); }
+.rwd-info { flex: 0 1 auto; max-width: 44vw; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.rwd-info .tick { margin-bottom: 2vmin; }
+.rwd-info .eyebrow { margin-bottom: 1.6vmin; }
+.rwd-info .pts { margin-bottom: 2vmin; }
+.rwd-info .cap { max-width: 100%; margin-bottom: 4vmin; }
+.rwd.solo .rwd-info { max-width: 80vw; }
+@media (orientation: portrait) {
+  .rwd { flex-direction: column; }
+  .rwd-media { margin: 0 0 3vmin; }
+  .rwd-media video, .rwd-media img { max-height: 42vh; max-width: 86vw; }
+  .rwd-info { max-width: 92vw; }
+}

@@ -300,7 +300,7 @@
 
   function reward(q, p) {
     var r = q.reward || { type: 'text', caption: 'Resposta certa!' };
-    var box = el('div', { class: 'reward' }, [el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })]);
+    var cap = el('div', { class: 'cap', text: r.caption || 'Resposta certa!' });
     var media = null;
     if (r.type === 'image') media = el('img', { src: mediaUrl(r.src), alt: '' });
     else if (r.type === 'video') {
@@ -308,13 +308,24 @@
       if (quiz.muteVideos) { media.setAttribute('muted', ''); media.muted = true; }   // quiz com videos sem som
     }
     else if (r.type === 'audio') media = el('audio', { src: mediaUrl(r.src), autoplay: '', controls: '' });
-    if (media) {
-      media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
-      box.insertBefore(media, box.firstChild);
-    }
+
     var tickIco = svg('<svg viewBox="0 0 24 24" fill="none" stroke="#4be08a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>');
     tickIco.className = 'tick';
-    render([top(true), tickIco, el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), el('p', { class: 'pts', text: '+ ' + fmt(p) + ' pontos' }), box, el('div', { class: 'actions' }, [nextBtn()])]);
+    var info = [tickIco, el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), el('p', { class: 'pts', text: '+ ' + fmt(p) + ' pontos' }), cap];
+    var actions = el('div', { class: 'actions' }, [nextBtn()]);
+
+    // Foto/video: midia a esquerda (cabe vertical) e informacoes a direita. Audio/texto: coluna unica.
+    if (media && r.type !== 'audio') {
+      var wrap = el('div', { class: 'rwd-media' }, [media]);
+      var row = el('div', { class: 'rwd' }, [wrap, el('div', { class: 'rwd-info' }, info.concat([actions]))]);
+      media.addEventListener('error', function () { row.className = 'rwd solo'; if (wrap.parentNode) wrap.parentNode.removeChild(wrap); });
+      render([top(true), row]);
+      return;
+    }
+    if (media) {
+      media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
+    }
+    render([top(true)].concat(info, media ? [media] : [], [actions]));
   }
 
   function end() {
