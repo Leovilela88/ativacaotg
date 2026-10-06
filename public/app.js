@@ -384,12 +384,12 @@
   function rankingScreen(quizId, highlight) {
     var id = quizId || data.quizzes[0].id;
     render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), el('p', { class: 'sub', text: 'Carregando...' })]);
-    ajax('GET', 'api/ranking?limit=10&_=' + Date.now(), null, function (r) {
+    ajax('GET', 'api/ranking?limit=100&_=' + Date.now(), null, function (r) {
       var all = (r && r.ranking) || {};
       var tabs = el('div', { class: 'tabs' }, data.quizzes.map(function (q) {
         return el('button', { class: 'tab' + (q.id === id ? ' on' : ''), text: q.title, onclick: function () { rankingScreen(q.id, highlight); } });
       }));
-      var list = all[id] || [], board = el('div', { class: 'board' });
+      var list = all[id] || [], board = el('div', { class: 'board', tabindex: '0' });
       if (!list.length) board.appendChild(el('p', { class: 'sub', text: 'Ninguém jogou este quiz ainda. Seja o primeiro!' }));
       list.forEach(function (e, i) {
         board.appendChild(el('div', { class: 'brow' + (e.id === highlight ? ' me' : '') + (i < 3 ? ' p' + (i + 1) : '') }, [
@@ -398,6 +398,19 @@
       });
       render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), tabs, board,
         el('div', { class: 'actions' }, [el('button', { text: 'Voltar', onclick: home })])], 0);
+
+      // A lista rola por dentro (a tela fica parada). Mostra o jogador logo que possivel.
+      var me = board.querySelector('.me');
+      if (me) board.scrollTop = Math.max(0, me.offsetTop - board.clientHeight / 2 + me.offsetHeight / 2);
+      // Controle remoto: com a lista selecionada, cima/baixo rolam; nas pontas o foco segue para os outros botoes.
+      onKey = function (e) {
+        var k = e.keyCode;
+        if (document.activeElement !== board || (k !== 38 && k !== 40)) return false;
+        var max = board.scrollHeight - board.clientHeight, d = k === 40 ? 1 : -1;
+        if (max <= 2 || (d > 0 && board.scrollTop >= max - 2) || (d < 0 && board.scrollTop <= 2)) return false;
+        board.scrollTop += d * (board.clientHeight / 4);
+        e.preventDefault(); return true;
+      };
     });
   }
 
@@ -411,7 +424,7 @@
     var dir = KEY[k];
     if (!dir) return; // OK/Enter já dispara click no botão focado
     e.preventDefault();
-    var btns = Array.prototype.slice.call(app.querySelectorAll('button:not([disabled])'));
+    var btns = Array.prototype.slice.call(app.querySelectorAll('button:not([disabled]), .board'));
     var cur = document.activeElement;
     if (btns.indexOf(cur) < 0) { if (btns[0]) btns[0].focus(); return; }
     var c = cur.getBoundingClientRect(), best = null, bestScore = 1e12;

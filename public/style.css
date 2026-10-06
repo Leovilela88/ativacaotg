@@ -179,8 +179,13 @@ h1 { margin: 0 0 1.6vmin; font-size: 5.4vmin; font-weight: 600; letter-spacing: 
 .tabs { display: flex; justify-content: center; flex-wrap: wrap; margin-bottom: 3vmin; }
 .tab { margin: 0 .8vmin 1vmin; padding: 1.6vmin 3.4vmin; font-size: 2.3vmin; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; border-radius: 99vmin; }
 .tab.on { background: rgba(198, 244, 50, .18); border-color: var(--lime); }
-.board { width: min(92vw, 90vmin); margin-bottom: 3vmin; }
-.brow { display: flex; align-items: center; margin-bottom: 1.2vmin; padding: 1.8vmin 3vmin; border-radius: 2vmin; background: rgba(4, 20, 11, .55); border: .2vmin solid var(--line); font-size: 3vmin; text-align: left; }
+.board { position: relative; width: min(92vw, 90vmin); margin-bottom: 3vmin; padding-right: 1vmin; max-height: 56vmin; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  outline: none; border-radius: 2vmin; }
+.board:focus { box-shadow: 0 0 0 .4vmin rgba(198, 244, 50, .55); }
+.board::-webkit-scrollbar { width: .8vmin; }
+.board::-webkit-scrollbar-track { background: rgba(255, 255, 255, .08); border-radius: 1vmin; }
+.board::-webkit-scrollbar-thumb { background: var(--lime); border-radius: 1vmin; }
+.brow { display: flex; align-items: center; margin-bottom: 1.1vmin; padding: 1.5vmin 3vmin; border-radius: 2vmin; background: rgba(4, 20, 11, .55); border: .2vmin solid var(--line); font-size: 2.8vmin; line-height: 1.2; text-align: left; }
 .brow .pos { width: 6vmin; font-weight: 700; color: var(--lime); }
 .brow .nm { flex: 1 1 auto; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brow .pt { font-weight: 700; font-variant-numeric: tabular-nums; }
