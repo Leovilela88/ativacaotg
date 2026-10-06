@@ -37,36 +37,53 @@
   ['keydown', 'click', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, bumpIdle, true); });
 
   // ---------- telas ----------
+  function top(withProgress) {
+    var kids = [el('img', { class: 'mini', src: 'img/logo.png', alt: 'Terra da Gente' })];
+    if (withProgress) {
+      var bars = el('div', { class: 'bars' });
+      for (var i = 0; i < quiz.questions.length; i++) bars.appendChild(el('i', { class: i <= qi ? 'on' : '' }));
+      kids.push(el('div', { class: 'progress' }, [el('span', { text: quiz.title }), bars]));
+    }
+    return el('div', { class: 'top' }, kids);
+  }
+
   function home() {
     quiz = null; qi = 0; score = 0;
-    var list = el('div', { class: 'grid' }, data.quizzes.map(function (q) {
-      return el('button', { text: q.title, onclick: function () { start(q); } });
+    var cards = el('div', { class: 'cards' }, data.quizzes.map(function (q) {
+      return el('button', { onclick: function () { start(q); } }, [
+        el('span', { class: 'label' }, [el('b', { text: q.title }), el('small', { text: q.subtitle || '' })]),
+        el('span', { class: 'chev' })
+      ]);
     }));
-    render([el('h1', { text: 'Terra da Gente' }), el('p', { class: 'sub', text: 'Escolha um quiz para começar' }), list]);
+    render([
+      el('img', { class: 'logo', src: 'img/logo.png', alt: 'Terra da Gente' }),
+      el('p', { class: 'eyebrow', text: 'Escolha um quiz para começar' }),
+      cards
+    ]);
   }
   function start(q) { quiz = q; qi = 0; score = 0; question(); }
 
   function question() {
     var q = quiz.questions[qi], tries = 0;
-    var opts = el('div', { class: 'grid opts' });
+    var opts = el('div', { class: 'opts' });
     q.options.forEach(function (label, i) {
-      var b = el('button', { text: label });
+      var b = el('button', {}, [
+        el('span', { class: 'badge', text: String.fromCharCode(65 + i) }),
+        el('span', { class: 'label', text: label })
+      ]);
       b.addEventListener('click', function () {
-        if (i === q.answer) { if (tries === 0) score++; reward(q, b, opts); }
-        else { tries++; b.className = 'wrong'; b.disabled = true; focusFirst(opts); }
+        if (i === q.answer) { if (tries === 0) score++; reward(q); }
+        else { tries++; b.className = 'wrong'; b.disabled = true; b.blur(); focusFirst(opts); }
       });
       opts.appendChild(b);
     });
-    render([
-      el('div', { class: 'meta' }, [el('span', { text: quiz.title }), el('span', { text: (qi + 1) + ' / ' + quiz.questions.length })]),
-      el('h2', { text: q.text }), opts
-    ]);
+    render([top(true), el('h2', { text: q.text }), opts]);
   }
   function focusFirst(c) { var b = c.querySelector('button:not([disabled])'); if (b) b.focus(); }
 
-  function reward(q, rightBtn) {
+  function reward(q) {
     var r = q.reward || { type: 'text', caption: 'Resposta certa!' };
-    var box = el('div', { class: 'reward' }, [el('div', { class: 'cap ok', text: r.caption || 'Resposta certa!' })]);
+    var box = el('div', { class: 'reward' }, [el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })]);
     var media = null;
     if (r.type === 'image') media = el('img', { src: r.src, alt: '' });
     else if (r.type === 'video') media = el('video', { src: r.src, autoplay: '', playsinline: '', controls: '' });
@@ -76,17 +93,18 @@
       box.insertBefore(media, box.firstChild);
     }
     var last = qi >= quiz.questions.length - 1;
-    var next = el('button', { text: last ? 'Ver resultado' : 'Próxima', onclick: function () { if (last) end(); else { qi++; question(); } } });
-    render([el('h2', { class: 'ok', text: 'Você acertou!' }), box, next]);
+    var next = el('button', { text: last ? 'Ver resultado' : 'Próxima pergunta', onclick: function () { if (last) end(); else { qi++; question(); } } });
+    render([top(true), el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), box, el('div', { class: 'actions' }, [next])]);
   }
 
   function end() {
     var total = quiz.questions.length;
     render([
-      el('h1', { text: 'Fim do quiz' }),
-      el('p', { class: 'big', text: score + ' / ' + total }),
+      top(false),
+      el('p', { class: 'eyebrow', text: 'Fim do quiz' }),
+      el('p', { class: 'big', text: score + '/' + total }),
       el('p', { class: 'sub', text: 'acertos de primeira' }),
-      el('div', { class: 'grid' }, [
+      el('div', { class: 'actions' }, [
         el('button', { text: 'Jogar de novo', onclick: function () { start(quiz); } }),
         el('button', { text: 'Outros quizzes', onclick: home })
       ])
