@@ -5,6 +5,14 @@
   var data = null, quiz = null, qi = 0, score = 0, idleTimer = null;
 
   // ---------- helpers ----------
+  // Midias: se MEDIA_BASE_URL (bucket R2) estiver definida, "video1.mp4" vira "<bucket>/video1.mp4".
+  // URLs completas (http/https) e caminhos absolutos passam sem alteracao.
+  function mediaUrl(src) {
+    if (!src || /^(https?:)?\/\//i.test(src) || src.charAt(0) === '/') return src;
+    var base = (window.APP_CONFIG && window.APP_CONFIG.mediaBase) || '';
+    if (!base) return src.indexOf('/') < 0 ? 'media/' + src : src;
+    return base + '/' + src.replace(/^media\//, '');
+  }
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
     for (var k in (attrs || {})) {
@@ -85,9 +93,9 @@
     var r = q.reward || { type: 'text', caption: 'Resposta certa!' };
     var box = el('div', { class: 'reward' }, [el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })]);
     var media = null;
-    if (r.type === 'image') media = el('img', { src: r.src, alt: '' });
-    else if (r.type === 'video') media = el('video', { src: r.src, autoplay: '', playsinline: '', controls: '' });
-    else if (r.type === 'audio') media = el('audio', { src: r.src, autoplay: '', controls: '' });
+    if (r.type === 'image') media = el('img', { src: mediaUrl(r.src), alt: '' });
+    else if (r.type === 'video') media = el('video', { src: mediaUrl(r.src), autoplay: '', playsinline: '', controls: '' });
+    else if (r.type === 'audio') media = el('audio', { src: mediaUrl(r.src), autoplay: '', controls: '' });
     if (media) {
       media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
       box.insertBefore(media, box.firstChild);

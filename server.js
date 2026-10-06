@@ -18,6 +18,13 @@ http.createServer((req, res) => {
   try { rel = decodeURIComponent(new URL(req.url, 'http://x').pathname); }
   catch { res.writeHead(400); return res.end(); }
   if (rel === '/health') { res.writeHead(200); return res.end('ok'); }
+  if (rel === '/config.js') {
+    // Expoe so o endereco publico das midias (nunca chaves). Ex.: https://midia.seudominio.com ou https://pub-xxxx.r2.dev
+    let base = (process.env.MEDIA_BASE_URL || '').trim().replace(/\/+$/, '');
+    if (base && !/^https?:\/\//i.test(base)) base = 'https://' + base;
+    res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
+    return res.end('window.APP_CONFIG = ' + JSON.stringify({ mediaBase: base }) + ';');
+  }
   if (rel.endsWith('/')) rel += 'index.html';
   const file = path.normalize(path.join(ROOT, rel));
   if (!file.startsWith(ROOT)) { res.writeHead(403); return res.end(); }
