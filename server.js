@@ -38,6 +38,7 @@ function validateContent(c) {
   for (const q of c.quizzes) {
     if (typeof q.id !== 'string' || typeof q.title !== 'string' || !q.title.trim()) return 'todo quiz precisa de titulo';
     if (!Array.isArray(q.questions)) return 'quiz sem lista de perguntas';
+    if (q.muteVideos != null && typeof q.muteVideos !== 'boolean') return 'opcao de video invalida em "' + q.title + '"';
     if (q.timeLimit != null && !(Number.isInteger(q.timeLimit) && q.timeLimit >= 5 && q.timeLimit <= 300)) return 'tempo por pergunta invalido em "' + q.title + '" (5 a 300 s)';
     if (q.lifelines) for (const k of ['skip', 'fifty']) if (q.lifelines[k] != null && !(Number.isInteger(q.lifelines[k]) && q.lifelines[k] >= 0 && q.lifelines[k] <= 9)) return 'ajudas invalidas em "' + q.title + '"';
     for (const p of q.questions) {

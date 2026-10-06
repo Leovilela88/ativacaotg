@@ -124,6 +124,9 @@
       h('div', { class: 'row' },
         numField('Tempo por pergunta (s)', quiz.timeLimit == null ? 30 : quiz.timeLimit, 5, 300, function (n) { quiz.timeLimit = n; mark(); }),
         lifeField(quiz, 'fifty', 'Eliminações por partida')),
+      h('label', { class: 'row', style: 'margin-top:12px;cursor:pointer' },
+        h('input', { type: 'checkbox', checked: !!quiz.muteVideos, style: 'width:20px;height:20px;accent-color:#c6f432', onchange: function (e) { if (e.target.checked) quiz.muteVideos = true; else delete quiz.muteVideos; mark(); } }),
+        h('span', { text: 'Vídeos do prêmio sem som (o áudio dos arquivos não toca neste quiz)' })),
       h('div', { style: 'margin-top:14px' }, h('button', { class: 'btn danger small', text: 'Excluir este quiz', onclick: function () {
         if (confirm('Excluir o quiz "' + quiz.title + '" e todas as suas perguntas?')) { c.quizzes.splice(S.qi, 1); mark(); render(); }
       } })));

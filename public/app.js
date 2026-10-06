@@ -303,7 +303,10 @@
     var box = el('div', { class: 'reward' }, [el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })]);
     var media = null;
     if (r.type === 'image') media = el('img', { src: mediaUrl(r.src), alt: '' });
-    else if (r.type === 'video') media = el('video', { src: mediaUrl(r.src), autoplay: '', playsinline: '', controls: '' });
+    else if (r.type === 'video') {
+      media = el('video', { src: mediaUrl(r.src), autoplay: '', playsinline: '', controls: '' });
+      if (quiz.muteVideos) { media.setAttribute('muted', ''); media.muted = true; }   // quiz com videos sem som
+    }
     else if (r.type === 'audio') media = el('audio', { src: mediaUrl(r.src), autoplay: '', controls: '' });
     if (media) {
       media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });

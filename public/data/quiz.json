@@ -5,6 +5,7 @@
       "id": "peixes",
       "title": "Peixes",
       "subtitle": "Quanto você sabe sobre os peixes?",
+      "muteVideos": true,
       "questions": [
         {
           "text": "É um dos grandes predadores dos rios do interior de São Paulo e pode ser encontrado em bacias hidrográficas da região de São Carlos. Conhecido pela força, pelo comportamento predador e pela coloração dourada, é muito procurado por pescadores esportivos. Que peixe é esse?",
