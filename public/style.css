@@ -1,107 +1,114 @@
 /* Terra da Gente - tema floresta. Unidades em vmin: escala de TV 1080p a celular. */
 :root {
-  --lime: #c6f432;
-  --lime-2: #8fdc1f;
-  --ink: #08210f;
-  --glass: rgba(255, 255, 255, .09);
-  --glass-line: rgba(255, 255, 255, .30);
-  --ok: #4be08a;
-  --bad: #ff6b57;
+  --lime: #c6f432; --lime-2: #8fdc1f; --ink: #08210f;
+  --ok: #4be08a; --bad: #ff6b57; --line: rgba(255, 255, 255, .16);
   --font: Futura, "Futura PT", "Jost", "Century Gothic", "Avenir Next", Arial, sans-serif;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; overflow: hidden; color: #fff; font-family: var(--font); }
-body {
-  background: #07170d url(img/fundo.jpg) center / cover no-repeat fixed;
-}
-body::before { /* escurece a foto para dar leitura ao conteudo */
-  content: ""; position: fixed; inset: 0; z-index: 0;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(5, 25, 12, .35), rgba(3, 14, 8, .88) 75%),
-    linear-gradient(180deg, rgba(3, 14, 8, .45), rgba(3, 14, 8, .65));
-}
-#app {
-  position: relative; z-index: 1; height: 100%;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 11vmin 7vmin 5vmin; text-align: center;
-  animation: fadeIn .45s ease both;
-}
+html, body { margin: 0; height: 100%; overflow: hidden; background: #06130b; color: #fff; font-family: var(--font); }
 
-/* ---------- cabecalho ---------- */
-.top { position: absolute; top: 3.5vmin; left: 5vmin; right: 5vmin; display: flex; align-items: center; justify-content: space-between; }
-.top .mini { height: 6.5vmin; }
-.progress { display: flex; align-items: center; gap: 2vmin; font-size: 2.2vmin; font-weight: 500; letter-spacing: .18em; text-transform: uppercase; opacity: .9; }
-.bars { display: flex; gap: .8vmin; }
-.bars i { display: block; width: 5vmin; height: .8vmin; border-radius: 1vmin; background: rgba(255, 255, 255, .25); }
-.bars i.on { background: linear-gradient(90deg, var(--lime), var(--lime-2)); }
+/* fundo: foto com zoom lento + camada de sombra */
+#bg { position: fixed; top: -4%; left: -4%; right: -4%; bottom: -4%; z-index: 0;
+  background: url(img/fundo.jpg) center / cover no-repeat; animation: drift 60s ease-in-out infinite alternate; }
+#shade { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(4, 22, 11, .30) 0%, rgba(2, 12, 7, .90) 78%),
+    linear-gradient(180deg, rgba(2, 12, 7, .55) 0%, rgba(2, 12, 7, .20) 30%, rgba(2, 12, 7, .70) 100%); }
+#app { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 12vmin 6vmin 5vmin; text-align: center; animation: fadeIn .5s ease both; }
+
+/* ---------- topo ---------- */
+.top { position: absolute; top: 0; left: 0; right: 0; height: 11vmin; padding: 0 5vmin; display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(180deg, rgba(2, 12, 7, .65), rgba(2, 12, 7, 0)); }
+.top .mini { height: 6vmin; }
+.progress { display: flex; align-items: center; font-size: 2vmin; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; opacity: .92; }
+.bars { display: flex; margin-left: 2.4vmin; }
+.bars i { display: block; width: 5vmin; height: .7vmin; border-radius: 1vmin; margin-left: .8vmin; background: rgba(255, 255, 255, .22); }
+.bars i.on { background: linear-gradient(90deg, var(--lime), var(--lime-2)); box-shadow: 0 0 1.4vmin rgba(198, 244, 50, .5); }
 
 /* ---------- tipografia ---------- */
-.logo { width: min(56vmin, 70vw); margin-bottom: 4vmin; filter: drop-shadow(0 1vmin 3vmin rgba(0, 0, 0, .5)); }
-.eyebrow { font-size: 2.2vmin; font-weight: 500; letter-spacing: .32em; text-transform: uppercase; color: var(--lime); margin: 0 0 2.5vmin; }
-h1 { font-size: 6.4vmin; font-weight: 700; letter-spacing: .02em; text-transform: uppercase; margin: 0 0 2vmin; line-height: 1.05; }
-h2 { font-size: 5vmin; font-weight: 600; line-height: 1.18; margin: 0 0 5vmin; max-width: 88vw; text-shadow: 0 .4vmin 2vmin rgba(0, 0, 0, .45); }
-p.sub { font-size: 2.9vmin; font-weight: 400; opacity: .85; margin: 0 0 5vmin; letter-spacing: .02em; }
-.big { font-size: 16vmin; font-weight: 700; line-height: 1; margin: 0 0 1vmin;
-  background: linear-gradient(180deg, #fff, var(--lime)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.ok { color: var(--ok); }
+.logo { width: min(54vmin, 70vw); filter: drop-shadow(0 1vmin 3vmin rgba(0, 0, 0, .55)); }
+.rule { width: 9vmin; height: .5vmin; border-radius: 1vmin; margin: 4vmin 0 3.4vmin; background: linear-gradient(90deg, var(--lime), var(--lime-2)); }
+.eyebrow { display: flex; align-items: center; justify-content: center; margin: 0 0 3vmin; font-size: 2.1vmin; font-weight: 500; letter-spacing: .34em; text-transform: uppercase; color: var(--lime); }
+.eyebrow::before, .eyebrow::after { content: ""; display: block; width: 6vmin; height: .2vmin; background: currentColor; opacity: .55; }
+.eyebrow::before { margin-right: 2.2vmin; } .eyebrow::after { margin-left: 2.2vmin; }
+.eyebrow.ok { color: var(--ok); }
+.sub { font-size: 2.8vmin; font-weight: 400; opacity: .85; margin: 0 0 4vmin; }
+
+/* ---------- painel da pergunta ---------- */
+.panel { max-width: min(92vw, 128vmin); margin-bottom: 4vmin; padding: 4.6vmin 6vmin 5vmin;
+  background: rgba(4, 20, 11, .52); -webkit-backdrop-filter: blur(1.8vmin); backdrop-filter: blur(1.8vmin);
+  border: .2vmin solid var(--line); border-radius: 3.4vmin; box-shadow: 0 2vmin 7vmin rgba(0, 0, 0, .45), inset 0 .15vmin 0 rgba(255, 255, 255, .14); }
+.panel .eyebrow { margin-bottom: 2.6vmin; }
+h2 { margin: 0; font-size: 4.6vmin; font-weight: 500; line-height: 1.28; letter-spacing: .005em; }
+h2.long { font-size: 3.5vmin; line-height: 1.36; }
 
 /* ---------- botoes ---------- */
 button {
-  font: inherit; color: #fff; cursor: pointer; outline: none; appearance: none; -webkit-appearance: none;
-  display: flex; align-items: center; gap: 2.4vmin; text-align: left;
-  padding: 2.6vmin 3.6vmin; font-size: 3.3vmin; font-weight: 500; letter-spacing: .01em;
-  background: rgba(255, 255, 255, .10);
-  -webkit-backdrop-filter: blur(1.6vmin); backdrop-filter: blur(1.6vmin);
-  border: .25vmin solid var(--glass-line); border-radius: 2.6vmin;
-  box-shadow: 0 1.2vmin 3.5vmin rgba(0, 0, 0, .35), inset 0 .15vmin 0 rgba(255, 255, 255, .22);
-  transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease, border-color .18s ease;
+  font: inherit; color: #fff; cursor: pointer; outline: none; -webkit-appearance: none; appearance: none;
+  display: flex; align-items: center; text-align: left; padding: 2.3vmin 3vmin; font-size: 3.1vmin; font-weight: 500; letter-spacing: .01em;
+  background: rgba(8, 36, 19, .62); -webkit-backdrop-filter: blur(1.4vmin); backdrop-filter: blur(1.4vmin);
+  border: .2vmin solid var(--line); border-radius: 2.2vmin; box-shadow: 0 1vmin 3vmin rgba(0, 0, 0, .32);
+  transition: transform .2s ease, background .2s ease, color .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
 button:focus, button:active {
-  transform: scale(1.045); color: var(--ink); border-color: transparent;
+  transform: scale(1.04); color: var(--ink); border-color: transparent;
   background: linear-gradient(135deg, var(--lime), var(--lime-2));
-  box-shadow: 0 0 0 .6vmin rgba(198, 244, 50, .35), 0 1.8vmin 5vmin rgba(143, 220, 31, .45);
+  box-shadow: 0 0 0 .5vmin rgba(198, 244, 50, .32), 0 1.6vmin 5vmin rgba(143, 220, 31, .42);
 }
 button:disabled { cursor: default; }
-
-.badge { /* letra da alternativa */
-  flex: 0 0 auto; width: 6.2vmin; height: 6.2vmin; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2.8vmin; font-weight: 700;
-  background: rgba(255, 255, 255, .16); border: .2vmin solid rgba(255, 255, 255, .35);
-  transition: inherit;
-}
-button:focus .badge, button:active .badge { background: var(--ink); color: var(--lime); border-color: var(--ink); }
 .label { flex: 1 1 auto; }
-.chev { flex: 0 0 auto; width: 2.6vmin; height: 2.6vmin; border-top: .5vmin solid currentColor; border-right: .5vmin solid currentColor; transform: rotate(45deg); margin-right: .8vmin; opacity: .85; }
+.badge { flex: 0 0 auto; width: 5.8vmin; height: 5.8vmin; margin-right: 2.4vmin; border-radius: 1.5vmin; display: flex; align-items: center; justify-content: center;
+  font-size: 2.6vmin; font-weight: 600; background: rgba(255, 255, 255, .12); border: .2vmin solid rgba(255, 255, 255, .28); transition: inherit; }
+button:focus .badge, button:active .badge { background: var(--ink); color: var(--lime); border-color: var(--ink); }
+.chev { flex: 0 0 auto; width: 2.2vmin; height: 2.2vmin; margin: 0 1vmin 0 2vmin; border-top: .45vmin solid currentColor; border-right: .45vmin solid currentColor; transform: rotate(45deg); opacity: .8; }
 
-/* lista de quizzes (home) */
-.cards { display: flex; flex-direction: column; gap: 2.4vmin; width: min(86vw, 96vmin); }
-.cards button { padding: 3.2vmin 4vmin; }
-.cards .label b { display: block; font-size: 3.6vmin; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
-.cards .label small { display: block; font-size: 2.3vmin; font-weight: 400; opacity: .8; margin-top: .6vmin; letter-spacing: .01em; }
+/* lista de quizzes */
+.cards { display: flex; flex-direction: column; width: min(86vw, 92vmin); }
+.cards button { padding: 3vmin 3.6vmin; margin-bottom: 2.2vmin; }
+.cards .num { flex: 0 0 auto; margin-right: 3vmin; padding-right: 3vmin; border-right: .2vmin solid currentColor; font-size: 3vmin; font-weight: 600; letter-spacing: .08em; color: var(--lime); transition: inherit; }
+.cards button:focus .num, .cards button:active .num { color: var(--ink); }
+.cards .label b { display: block; font-size: 3.5vmin; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.cards .label small { display: block; margin-top: .6vmin; font-size: 2.2vmin; font-weight: 400; opacity: .78; }
 
 /* alternativas */
-.opts { display: grid; grid-template-columns: 1fr 1fr; gap: 2.4vmin; width: min(92vw, 150vmin); }
+.opts { display: grid; grid-template-columns: 1fr 1fr; grid-gap: 2.2vmin; width: min(92vw, 128vmin); }
+.opts button { animation: rise .55s ease both; }
+.opts button:nth-child(2) { animation-delay: .06s; } .opts button:nth-child(3) { animation-delay: .12s; }
+.opts button:nth-child(4) { animation-delay: .18s; } .opts button:nth-child(5) { animation-delay: .24s; } .opts button:nth-child(6) { animation-delay: .30s; }
 .opts button:last-child:nth-child(odd) { grid-column: 1 / -1; }
-@media (orientation: portrait) { .opts { grid-template-columns: 1fr; } }
-.opts button.wrong {
-  animation: shake .4s ease; transform: none; color: rgba(255, 255, 255, .6);
-  background: rgba(255, 107, 87, .22); border-color: rgba(255, 107, 87, .65); box-shadow: none;
-}
+@media (orientation: portrait) { .opts { grid-template-columns: 1fr; } .panel { padding: 4vmin 4.4vmin; } h2 { font-size: 4.2vmin; } h2.long { font-size: 3.3vmin; } }
+.opts button.wrong { animation: shake .4s ease; transform: none; color: rgba(255, 255, 255, .55);
+  background: rgba(255, 107, 87, .18); border-color: rgba(255, 107, 87, .6); box-shadow: none; }
 .opts button.wrong .badge { background: var(--bad); color: #fff; border-color: transparent; }
+.hint { margin: 2.6vmin 0 0; min-height: 3.4vmin; font-size: 2.5vmin; color: var(--bad); opacity: 0; transition: opacity .25s ease; }
+.hint.show { opacity: 1; }
 
-/* acoes (proxima, jogar de novo) */
-.actions { display: flex; gap: 2.4vmin; justify-content: center; flex-wrap: wrap; }
-.actions button { padding: 2.6vmin 5vmin; justify-content: center; text-transform: uppercase; letter-spacing: .14em; font-weight: 600; font-size: 2.8vmin; }
+/* acoes */
+.actions { display: flex; justify-content: center; flex-wrap: wrap; }
+.actions button { margin: 0 1.2vmin 2vmin; padding: 2.5vmin 5.4vmin; justify-content: center; text-transform: uppercase; letter-spacing: .16em; font-weight: 600; font-size: 2.6vmin; }
 
-/* premio */
-.reward { display: flex; flex-direction: column; align-items: center; gap: 3vmin; width: 100%; margin-bottom: 4vmin; }
-.reward img, .reward video {
-  max-width: 86vw; max-height: 54vh; border-radius: 2.4vmin; background: #000;
-  border: .25vmin solid var(--glass-line); box-shadow: 0 2vmin 6vmin rgba(0, 0, 0, .55);
-}
-.reward audio { width: min(70vw, 90vmin); }
-.cap { font-size: 3.4vmin; font-weight: 400; max-width: 80vw; line-height: 1.3; }
+/* acerto e premio */
+.tick { width: 9vmin; height: 9vmin; margin-bottom: 2.4vmin; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: rgba(75, 224, 138, .16); border: .3vmin solid var(--ok); box-shadow: 0 0 4vmin rgba(75, 224, 138, .35); animation: pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
+.tick svg { width: 4.6vmin; height: 4.6vmin; }
+.reward { display: flex; flex-direction: column; align-items: center; width: 100%; margin-bottom: 3.4vmin; }
+.reward img, .reward video { max-width: 86vw; max-height: 52vh; margin-bottom: 3vmin; border-radius: 2.6vmin; background: #000;
+  border: .25vmin solid rgba(255, 255, 255, .28); box-shadow: 0 2.4vmin 7vmin rgba(0, 0, 0, .6); }
+.reward audio { width: min(70vw, 90vmin); margin-bottom: 3vmin; }
+.cap { max-width: 80vw; font-size: 3.6vmin; font-weight: 500; line-height: 1.3; }
+
+/* resultado */
+.ring { position: relative; width: 32vmin; height: 32vmin; margin: 0 auto 3.4vmin; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .track { fill: none; stroke: rgba(255, 255, 255, .14); stroke-width: 9; }
+.ring .bar { fill: none; stroke: var(--lime); stroke-width: 9; stroke-linecap: round; stroke-dasharray: 326.7; transition: stroke-dashoffset 1.3s cubic-bezier(.3, .8, .3, 1); filter: drop-shadow(0 0 1.2vmin rgba(198, 244, 50, .55)); }
+.ring b { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: 8.4vmin; font-weight: 600; letter-spacing: .02em; }
+h1 { margin: 0 0 1.6vmin; font-size: 5.4vmin; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; line-height: 1.1; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(1.2vmin); } to { opacity: 1; transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(2vmin); } to { opacity: 1; transform: none; } }
+@keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1vmin); } 75% { transform: translateX(1vmin); } }
+@keyframes drift { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.07) translate(-1%, -1%); } }
+@media (prefers-reduced-motion: reduce) { #bg, #app, .opts button, .tick { animation: none !important; } }

@@ -45,6 +45,7 @@
   ['keydown', 'click', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, bumpIdle, true); });
 
   // ---------- telas ----------
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function top(withProgress) {
     var kids = [el('img', { class: 'mini', src: 'img/logo.png', alt: 'Terra da Gente' })];
     if (withProgress) {
@@ -57,15 +58,17 @@
 
   function home() {
     quiz = null; qi = 0; score = 0;
-    var cards = el('div', { class: 'cards' }, data.quizzes.map(function (q) {
+    var cards = el('div', { class: 'cards' }, data.quizzes.map(function (q, i) {
       return el('button', { onclick: function () { start(q); } }, [
+        el('span', { class: 'num', text: pad(i + 1) }),
         el('span', { class: 'label' }, [el('b', { text: q.title }), el('small', { text: q.subtitle || '' })]),
         el('span', { class: 'chev' })
       ]);
     }));
     render([
       el('img', { class: 'logo', src: 'img/logo.png', alt: 'Terra da Gente' }),
-      el('p', { class: 'eyebrow', text: 'Escolha um quiz para começar' }),
+      el('div', { class: 'rule' }),
+      el('p', { class: 'eyebrow', text: 'Escolha um quiz' }),
       cards
     ]);
   }
@@ -73,6 +76,7 @@
 
   function question() {
     var q = quiz.questions[qi], tries = 0;
+    var hint = el('p', { class: 'hint' });
     var opts = el('div', { class: 'opts' });
     q.options.forEach(function (label, i) {
       var b = el('button', {}, [
@@ -81,11 +85,15 @@
       ]);
       b.addEventListener('click', function () {
         if (i === q.answer) { if (tries === 0) score++; reward(q); }
-        else { tries++; b.className = 'wrong'; b.disabled = true; b.blur(); focusFirst(opts); }
+        else { tries++; b.className = 'wrong'; b.disabled = true; b.blur(); hint.textContent = 'Quase! Tente outra alternativa.'; hint.className = 'hint show'; focusFirst(opts); }
       });
       opts.appendChild(b);
     });
-    render([top(true), el('h2', { text: q.text }), opts]);
+    var panel = el('div', { class: 'panel' }, [
+      el('p', { class: 'eyebrow', text: 'Pergunta ' + (qi + 1) + ' de ' + quiz.questions.length }),
+      el('h2', { class: q.text.length > 150 ? 'long' : '', text: q.text })
+    ]);
+    render([top(true), panel, opts, hint]);
   }
   function focusFirst(c) { var b = c.querySelector('button:not([disabled])'); if (b) b.focus(); }
 
@@ -100,23 +108,34 @@
       media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
       box.insertBefore(media, box.firstChild);
     }
+    var tick = el('div', { class: 'tick' });
+    tick.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="#4be08a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
     var last = qi >= quiz.questions.length - 1;
     var next = el('button', { text: last ? 'Ver resultado' : 'Próxima pergunta', onclick: function () { if (last) end(); else { qi++; question(); } } });
-    render([top(true), el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), box, el('div', { class: 'actions' }, [next])]);
+    render([top(true), tick, el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), box, el('div', { class: 'actions' }, [next])]);
   }
 
   function end() {
-    var total = quiz.questions.length;
+    var total = quiz.questions.length, ratio = total ? score / total : 0;
+    var msg = ratio === 1 ? 'Perfeito! Você conhece bem a nossa terra.' : ratio >= 0.5 ? 'Muito bem! Falta pouco para gabaritar.' : 'Boa tentativa! Jogue de novo e descubra mais.';
+    var ring = el('div', { class: 'ring' });
+    ring.innerHTML = '<svg viewBox="0 0 120 120"><circle class="track" cx="60" cy="60" r="52"/><circle class="bar" cx="60" cy="60" r="52" style="stroke-dashoffset:326.7"/></svg>';
+    ring.appendChild(el('b', { text: score + '/' + total }));
     render([
       top(false),
       el('p', { class: 'eyebrow', text: 'Fim do quiz' }),
-      el('p', { class: 'big', text: score + '/' + total }),
-      el('p', { class: 'sub', text: 'acertos de primeira' }),
+      ring,
+      el('h1', { text: msg.split('!')[0] + '!' }),
+      el('p', { class: 'sub', text: msg.split('! ')[1] || 'acertos de primeira' }),
       el('div', { class: 'actions' }, [
         el('button', { text: 'Jogar de novo', onclick: function () { start(quiz); } }),
         el('button', { text: 'Outros quizzes', onclick: home })
       ])
     ]);
+    setTimeout(function () {
+      var bar = ring.querySelector('.bar');
+      if (bar) bar.style.strokeDashoffset = String(326.7 * (1 - ratio));
+    }, 120);
   }
 
   // ---------- navegação por controle remoto (espacial) ----------
