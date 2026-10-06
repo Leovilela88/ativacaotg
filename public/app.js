@@ -201,71 +201,44 @@
     }, 100);
   }
 
-  // Sorteio visivel em duas etapas: 1) quantas alternativas saem (1 a 3); 2) quais saem, uma a uma.
-  // O "tambor" gira por TODAS as letras restantes (inclusive a certa, para nao entregar a resposta)
-  // e sempre para numa errada.
+  // Sorteio visivel: so o NUMERO de alternativas eliminadas (1 a 3). Quando o numero para,
+  // as eliminadas (escolhidas ao acaso entre as erradas) saem todas de uma vez.
   function runDraw(btns, cand, maxN, onDone) {
-    var tok = screenToken, idx = 0, picks = [];
-    var letter = el('b', { text: '?' }), msg = el('p', { class: 'dtxt' });
+    var tok = screenToken;
+    var letter = el('b', { text: '?' }), msg = el('p', { class: 'dtxt', text: 'Sorteando quantas alternativas serão eliminadas' });
     var drum = el('div', { class: 'drum' }, [letter]), chips = el('div', { class: 'chips' });
     var ov = el('div', { class: 'draw' }, [el('div', { class: 'dbox' }, [el('p', { class: 'eyebrow', text: 'Sorteio' }), drum, chips, msg])]);
     app.appendChild(ov);
-    function L(i) { return String.fromCharCode(65 + i); }
     function rnd(n) { return Math.floor(Math.random() * n); }
 
-    // Gira por "pool" (valores) e para em "target". "cls" e o estilo final do tambor.
-    function spin(pool, target, label, cls, landed) {
-      chips.innerHTML = '';
-      var chipEls = pool.map(function (v) { var c = el('span', { class: 'chip2', text: label(v) }); chips.appendChild(c); return c; });
-      drum.className = 'drum';
-      var steps = 11 + rnd(4), seq = [], start = rnd(pool.length);
-      for (var s = 0; s < steps; s++) seq.push(pool[(start + s) % pool.length]);
-      seq[steps - 1] = target;
-      if (seq[steps - 2] === target) seq[steps - 2] = pool[(pool.indexOf(target) + 1) % pool.length];
-      var n = 0;
-      (function step() {
-        if (tok !== screenToken) return;
-        var cur = seq[n];
-        letter.textContent = label(cur);
-        chipEls.forEach(function (c, k) { c.className = 'chip2' + (pool[k] === cur ? ' on' : ''); });
-        n++;
-        if (n < seq.length) { setTimeout(step, 70 * Math.pow(1.12, n)); return; }
-        drum.className = 'drum ' + cls;
-        landed();
-      })();
-    }
+    var nums = [], count = 1 + rnd(maxN);
+    for (var i = 1; i <= maxN; i++) nums.push(i);
+    var chipEls = nums.map(function (v) { var c = el('span', { class: 'chip2', text: String(v) }); chips.appendChild(c); return c; });
 
-    function drawOne() {
+    // o numero gira e desacelera ate parar em "count"
+    var steps = 11 + rnd(4), seq = [], start = rnd(nums.length);
+    for (var s = 0; s < steps; s++) seq.push(nums[(start + s) % nums.length]);
+    seq[steps - 1] = count;
+    if (seq[steps - 2] === count) seq[steps - 2] = nums[(nums.indexOf(count) + 1) % nums.length];
+
+    var n = 0;
+    (function step() {
       if (tok !== screenToken) return;
-      if (idx >= picks.length) { if (ov.parentNode) ov.parentNode.removeChild(ov); onDone(); return; }
-      var target = picks[idx++], pool = [];
-      btns.forEach(function (b, i) { if (!b.disabled) pool.push(i); });
-      msg.textContent = 'Alternativa ' + idx + ' de ' + picks.length;
-      spin(pool, target, L, 'stop', function () {
-        msg.textContent = 'Alternativa ' + L(target) + ' eliminada';
-        setTimeout(function () {
-          if (tok !== screenToken) return;
-          btns[target].className = 'gone'; btns[target].disabled = true;
-          setTimeout(drawOne, 600);
-        }, 1000);
-      });
-    }
-
-    function begin(count) {
-      var pool = cand.slice(), k = 0;
-      while (k < count) { picks.push(pool.splice(rnd(pool.length), 1)[0]); k++; }
-      drawOne();
-    }
-
-    if (maxN > 1) {
-      var nums = [], count = 1 + rnd(maxN);
-      for (var i = 1; i <= maxN; i++) nums.push(i);
-      msg.textContent = 'Sorteando quantas alternativas serão eliminadas';
-      spin(nums, count, String, 'stop ok', function () {
-        msg.textContent = count === 1 ? 'Será eliminada 1 alternativa' : 'Serão eliminadas ' + count + ' alternativas';
-        setTimeout(function () { if (tok === screenToken) begin(count); }, 1400);
-      });
-    } else begin(1);
+      var cur = seq[n];
+      letter.textContent = String(cur);
+      chipEls.forEach(function (c, k) { c.className = 'chip2' + (nums[k] === cur ? ' on' : ''); });
+      n++;
+      if (n < seq.length) { setTimeout(step, 70 * Math.pow(1.12, n)); return; }
+      drum.className = 'drum stop ok';
+      msg.textContent = count === 1 ? 'Será eliminada 1 alternativa' : 'Serão eliminadas ' + count + ' alternativas';
+      setTimeout(function () {
+        if (tok !== screenToken) return;
+        var pool = cand.slice();
+        for (var k = 0; k < count; k++) { var t = pool.splice(rnd(pool.length), 1)[0]; btns[t].className = 'gone'; btns[t].disabled = true; }
+        if (ov.parentNode) ov.parentNode.removeChild(ov);
+        onDone();
+      }, 1400);
+    })();
   }
 
   function focusFirst(c) { var b = c.querySelector('button:not([disabled])'); if (b) b.focus(); }
