@@ -196,10 +196,9 @@
     if (q.sound) {
       audio = el('audio', { src: mediaUrl(q.sound), preload: 'auto' });
       eq = el('div', { class: 'eq' }, [el('i'), el('i'), el('i'), el('i'), el('i'), el('i'), el('i')]);
-      listenB = el('button', { class: 'help', text: 'Ouvir novamente' });
+      listenB = el('button', { class: 'help', text: 'Toque para ouvir', hidden: '' });   // so aparece se o navegador bloquear o som
       listenB.addEventListener('click', function () {
-        if (paused || done) return;
-        try { audio.currentTime = 0; } catch (e) {}
+        if (paused || done || started) return;
         var pr = audio.play(); if (pr && pr.catch) pr.catch(function () {});
       });
       panelKids.push(el('div', { class: 'sound' }, [eq, listenB, audio]));
@@ -222,13 +221,13 @@
     }
 
     if (!audio) { startClock(); return; }
-    audio.addEventListener('playing', function () { eq.className = 'eq on'; startClock(); });
+    audio.addEventListener('playing', function () { eq.className = 'eq on'; listenB.hidden = true; startClock(); });
     audio.addEventListener('pause', function () { eq.className = 'eq'; });
     audio.addEventListener('ended', function () { eq.className = 'eq'; });
-    audio.addEventListener('error', function () { listenB.disabled = true; say('Não foi possível tocar o áudio.'); startClock(); });
+    audio.addEventListener('error', function () { listenB.hidden = true; say('Não foi possível tocar o áudio.'); startClock(); });
     var pr = audio.play();
     if (pr && pr.catch) pr.catch(function () {            // navegador bloqueou o som automatico
-      blocked = true; listenB.textContent = 'Toque para ouvir'; say('Toque em “Toque para ouvir” para começar.');
+      blocked = true; listenB.hidden = false; say('Toque em “Toque para ouvir” para começar.');
       try { listenB.focus(); } catch (e) {}
     });
     setTimeout(function () { if (!started && !blocked && tokOk()) startClock(); }, 12000);   // rede muito lenta: nao trava a partida
@@ -312,7 +311,35 @@
     var tickIco = svg('<svg viewBox="0 0 24 24" fill="none" stroke="#4be08a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>');
     tickIco.className = 'tick';
     var info = [tickIco, el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), el('p', { class: 'pts', text: '+ ' + fmt(p) + ' pontos' }), cap];
-    var actions = el('div', { class: 'actions' }, [nextBtn()]);
+    var nextB = nextBtn(), nextLabel = nextB.textContent, actions = el('div', { class: 'actions' }, [nextB]);
+
+    // Premio em video: o botao so libera 5 s depois que o video comeca a tocar (a pessoa assiste o inicio).
+    // Falha, fim do video ou 9 s sem iniciar liberam na hora, para ninguem ficar preso.
+    var tok = 0, armed = false, freed = false;
+    function free() {
+      if (freed) return; freed = true;
+      nextB.disabled = false; nextB.textContent = nextLabel;
+      if (document.activeElement === document.body) { try { nextB.focus(); } catch (e) {} }
+    }
+    function arm() {
+      if (armed || freed) return; armed = true;
+      var left = 5;
+      (function count() {
+        if (tok !== screenToken || freed) return;
+        if (left <= 0) { free(); return; }
+        nextB.textContent = 'Aguarde ' + left + 's'; left--;
+        setTimeout(count, 1000);
+      })();
+    }
+    function gate() {
+      tok = screenToken;
+      if (!(media && r.type === 'video')) return;
+      nextB.disabled = true; nextB.textContent = 'Assista ao vídeo';
+      media.addEventListener('playing', arm);
+      media.addEventListener('ended', free);
+      media.addEventListener('error', free);
+      setTimeout(function () { if (tok === screenToken && !armed) free(); }, 9000);
+    }
 
     // Foto/video: midia a esquerda (cabe vertical) e informacoes a direita. Audio/texto: coluna unica.
     if (media && r.type !== 'audio') {
@@ -320,6 +347,7 @@
       var row = el('div', { class: 'rwd' }, [wrap, el('div', { class: 'rwd-info' }, info.concat([actions]))]);
       media.addEventListener('error', function () { row.className = 'rwd solo'; if (wrap.parentNode) wrap.parentNode.removeChild(wrap); });
       render([top(true), row]);
+      gate();
       return;
     }
     if (media) {
