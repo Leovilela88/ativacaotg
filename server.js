@@ -28,8 +28,8 @@ http.createServer((req, res) => {
     const headers = {
       'Content-Type': TYPES[ext] || 'application/octet-stream',
       'Accept-Ranges': 'bytes',
-      // JSON/HTML sempre frescos (conteúdo editável); mídia pode ficar em cache.
-      'Cache-Control': ['.json', '.html'].includes(ext) ? 'no-cache' : 'public, max-age=86400',
+      // Código e conteúdo sempre revalidados (senão o aparelho segura versão antiga); só mídia pesada fica em cache.
+      'Cache-Control': ['.json', '.html', '.css', '.js'].includes(ext) ? 'no-cache, must-revalidate' : 'public, max-age=3600',
     };
     const range = req.headers.range && /bytes=(\d*)-(\d*)/.exec(req.headers.range);
     if (range) {
