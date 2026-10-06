@@ -353,6 +353,32 @@
     if (best) best.focus();
   });
 
+  // ---------- tela cheia ----------
+  // Botao no canto + tecla F. Com ?kiosk na URL, o primeiro toque/tecla ja entra em tela cheia.
+  // (iPhone nao permite: la, usar "Adicionar a Tela de Inicio" - o manifest abre em tela cheia.)
+  var fsBtn = document.getElementById('fs'), root = document.documentElement;
+  var reqFs = root.requestFullscreen || root.webkitRequestFullscreen || root.msRequestFullscreen;
+  function isFs() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function toggleFs() {
+    try {
+      if (isFs()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); }
+      else if (reqFs) { reqFs.call(root); }
+    } catch (e) {}
+  }
+  var ICON_IN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+  var ICON_OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+  function paintFs() { if (fsBtn) { fsBtn.innerHTML = isFs() ? ICON_OUT : ICON_IN; fsBtn.setAttribute('aria-label', isFs() ? 'Sair da tela cheia' : 'Tela cheia'); } }
+  if (fsBtn && reqFs) {
+    fsBtn.hidden = false; paintFs();
+    fsBtn.addEventListener('click', toggleFs);
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) { document.addEventListener(ev, paintFs); });
+    document.addEventListener('keydown', function (e) { if (!onKey && (e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) toggleFs(); });
+    if (/[?&]kiosk\b/.test(location.search)) {
+      var once = function () { document.removeEventListener('click', once, true); document.removeEventListener('keydown', once, true); document.removeEventListener('touchend', once, true); if (!isFs()) toggleFs(); };
+      document.addEventListener('click', once, true); document.addEventListener('keydown', once, true); document.addEventListener('touchend', once, true);
+    }
+  }
+
   // ---------- boot ----------
   ajax('GET', 'data/quiz.json?_=' + Date.now(), null, function (j) {
     if (!j) { app.textContent = 'Erro ao carregar o conteúdo.'; return; }
