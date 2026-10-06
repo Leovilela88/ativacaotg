@@ -7,10 +7,18 @@
       "subtitle": "Quanto você sabe sobre os peixes?",
       "questions": [
         {
-          "text": "Pergunta de teste: qual é a resposta certa?",
-          "options": ["Opção A", "Opção B (certa)", "Opção C", "Opção D"],
+          "text": "É um dos grandes predadores dos rios do interior de São Paulo e pode ser encontrado em bacias hidrográficas da região de São Carlos. Conhecido pela força, pelo comportamento predador e pela coloração dourada, é muito procurado por pescadores esportivos. Que peixe é esse?",
+          "options": [
+            "Piracanjuba",
+            "Dourado",
+            "Piapara",
+            "Tabarana"
+          ],
           "answer": 1,
-          "reward": { "type": "text", "caption": "Acertou!" }
+          "reward": {
+            "type": "text",
+            "caption": "Acertou! É o Dourado."
+          }
         }
       ]
     },
@@ -21,9 +29,16 @@
       "questions": [
         {
           "text": "Pergunta de teste: qual é a resposta certa?",
-          "options": ["Opção A (certa)", "Opção B", "Opção C"],
+          "options": [
+            "Opção A (certa)",
+            "Opção B",
+            "Opção C"
+          ],
           "answer": 0,
-          "reward": { "type": "text", "caption": "Acertou!" }
+          "reward": {
+            "type": "text",
+            "caption": "Acertou!"
+          }
         }
       ]
     }
