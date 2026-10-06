@@ -120,9 +120,10 @@
       h('input', { type: 'text', value: quiz.title, oninput: function (e) { quiz.title = e.target.value; mark(); } }),
       h('label', { class: 'lbl', text: 'Subtítulo' }),
       h('input', { type: 'text', value: quiz.subtitle || '', oninput: function (e) { quiz.subtitle = e.target.value; mark(); } }),
-      h('label', { class: 'lbl', text: 'Ajudas por partida' }),
+      h('label', { class: 'lbl', text: 'Regras do jogo' }),
       h('div', { class: 'row' },
-        lifeField(quiz, 'skip', 'Pular'), lifeField(quiz, 'fifty', 'Eliminar alternativas')),
+        numField('Tempo por pergunta (s)', quiz.timeLimit == null ? 30 : quiz.timeLimit, 5, 300, function (n) { quiz.timeLimit = n; mark(); }),
+        lifeField(quiz, 'fifty', 'Eliminações por partida')),
       h('div', { style: 'margin-top:14px' }, h('button', { class: 'btn danger small', text: 'Excluir este quiz', onclick: function () {
         if (confirm('Excluir o quiz "' + quiz.title + '" e todas as suas perguntas?')) { c.quizzes.splice(S.qi, 1); mark(); render(); }
       } })));
@@ -134,6 +135,12 @@
     return h('div', { class: 'layout' }, side, h('div', {}, head, cards, add));
   }
 
+  function numField(label, cur, min, max, onSet) {
+    return h('label', { class: 'row', style: 'flex:1' }, h('span', { class: 'hint', style: 'white-space:nowrap', text: label }),
+      h('input', { type: 'number', min: String(min), max: String(max), value: String(cur), style: 'width:90px', onchange: function (e) {
+        var n = Math.max(min, Math.min(max, parseInt(e.target.value, 10) || min)); e.target.value = String(n); onSet(n);
+      } }));
+  }
   function lifeField(quiz, key, label) {
     var cur = quiz.lifelines && quiz.lifelines[key] != null ? quiz.lifelines[key] : 1;
     return h('label', { class: 'row', style: 'flex:1' }, h('span', { class: 'hint', style: 'white-space:nowrap', text: label }),
@@ -235,6 +242,39 @@
     return h('div', {}, drop, h('div', { id: 'uploads' }), S.media.length ? grid : h('p', { class: 'hint', text: 'Nenhuma mídia enviada ainda.' }));
   }
 
+  // ---------- aba Ranking ----------
+  function loadRank() {
+    var q = S.content.quizzes[S.rq || 0];
+    if (!q) { S.rank = []; return Promise.resolve(); }
+    return api('GET', '/api/ranking?quizId=' + encodeURIComponent(q.id) + '&limit=300').then(function (j) { S.rank = (j.ranking || {})[q.id] || []; }).catch(function () { S.rank = []; });
+  }
+  function viewRanking() {
+    var c = S.content, qz = c.quizzes[S.rq || 0];
+    if (!qz) return h('p', { class: 'hint', text: 'Crie um quiz primeiro.' });
+    var sel = h('select', { style: 'max-width:320px', onchange: function (e) { S.rq = parseInt(e.target.value, 10); S.rank = null; render(); loadRank().then(render); } },
+      c.quizzes.map(function (q, i) { return h('option', { value: String(i), selected: i === (S.rq || 0), text: q.title }); }));
+    var head = h('div', { class: 'row', style: 'justify-content:space-between;margin-bottom:14px' }, sel,
+      h('div', { class: 'row' },
+        h('button', { class: 'btn small', text: 'Atualizar', onclick: function () { S.rank = null; render(); loadRank().then(render); } }),
+        h('button', { class: 'btn small danger', text: 'Limpar ranking', onclick: function () {
+          if (!confirm('Apagar TODO o ranking de "' + qz.title + '"? Isso não pode ser desfeito.')) return;
+          api('DELETE', '/api/ranking?quizId=' + encodeURIComponent(qz.id) + '&all=1').then(function () { S.rank = []; render(); }).catch(function (e) { alert(e.message); });
+        } })));
+    if (S.rank == null) return h('div', {}, head, h('p', { class: 'hint', text: 'Carregando...' }));
+    if (!S.rank.length) return h('div', {}, head, h('p', { class: 'hint', text: 'Ninguém jogou este quiz ainda.' }));
+    var rows = S.rank.map(function (e, i) {
+      return h('tr', {}, h('td', { text: String(i + 1) }), h('td', { text: e.name }), h('td', { text: String(e.points) }),
+        h('td', { text: e.correct + '/' + e.total }), h('td', { text: (e.ms / 1000).toFixed(1) + ' s' }),
+        h('td', { text: new Date(e.at).toLocaleString('pt-BR') }),
+        h('td', {}, h('button', { class: 'btn small danger', text: 'Excluir', onclick: function () {
+          if (!confirm('Remover "' + e.name + '" do ranking?')) return;
+          api('DELETE', '/api/ranking?quizId=' + encodeURIComponent(qz.id) + '&id=' + encodeURIComponent(e.id)).then(loadRank).then(render).catch(function (er) { alert(er.message); });
+        } })));
+    });
+    return h('div', {}, head, h('table', { class: 'tbl' },
+      h('thead', {}, h('tr', {}, ['#', 'Nome', 'Pontos', 'Acertos', 'Tempo', 'Quando', ''].map(function (t) { return h('th', { text: t }); }))), h('tbody', {}, rows)));
+  }
+
   // ---------- montagem ----------
   function render() {
     var y = window.scrollY;
@@ -247,8 +287,8 @@
     } else {
       if (!S.status.mediaBase) wrap.appendChild(h('div', { class: 'notice' }, 'Defina MEDIA_BASE_URL no Railway (endereço público do bucket) para as mídias aparecerem no site e nas prévias.'));
       wrap.appendChild(h('div', { class: 'tabs' },
-        ['perguntas', 'midias'].map(function (t) { return h('button', { class: S.tab === t ? 'on' : '', text: t === 'perguntas' ? 'Perguntas' : 'Mídias', onclick: function () { S.tab = t; render(); } }); })));
-      wrap.appendChild(S.tab === 'perguntas' ? viewQuestions() : viewMedia());
+        ['perguntas', 'midias', 'ranking'].map(function (t) { return h('button', { class: S.tab === t ? 'on' : '', text: t === 'perguntas' ? 'Perguntas' : t === 'midias' ? 'Mídias' : 'Ranking', onclick: function () { S.tab = t; if (t === 'ranking') { S.rank = null; render(); loadRank().then(render); } else render(); } }); })));
+      wrap.appendChild(S.tab === 'perguntas' ? viewQuestions() : S.tab === 'midias' ? viewMedia() : viewRanking());
     }
     root.appendChild(wrap);
     if (S.status.r2 && S.tab === 'perguntas') {

@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const auth = require('./lib/auth');
 const store = require('./lib/store');
+const ranking = require('./lib/ranking');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, 'public');
@@ -37,6 +38,7 @@ function validateContent(c) {
   for (const q of c.quizzes) {
     if (typeof q.id !== 'string' || typeof q.title !== 'string' || !q.title.trim()) return 'todo quiz precisa de titulo';
     if (!Array.isArray(q.questions)) return 'quiz sem lista de perguntas';
+    if (q.timeLimit != null && !(Number.isInteger(q.timeLimit) && q.timeLimit >= 5 && q.timeLimit <= 300)) return 'tempo por pergunta invalido em "' + q.title + '" (5 a 300 s)';
     if (q.lifelines) for (const k of ['skip', 'fifty']) if (q.lifelines[k] != null && !(Number.isInteger(q.lifelines[k]) && q.lifelines[k] >= 0 && q.lifelines[k] <= 9)) return 'ajudas invalidas em "' + q.title + '"';
     for (const p of q.questions) {
       if (typeof p.text !== 'string' || !p.text.trim()) return 'pergunta sem texto em "' + q.title + '"';
@@ -55,6 +57,43 @@ async function publicContent() {
     catch (e) { console.error('R2 indisponivel, usando arquivo local:', e.message); }
   }
   return fs.readFileSync(FALLBACK, 'utf8');
+}
+
+// Limite simples por IP para rotas publicas (evita enchente de pontuacoes).
+const hits = new Map();
+function limited(ip, key, max, windowMs) {
+  const id = key + ip, now = Date.now(), h = hits.get(id) || { n: 0, reset: now + windowMs };
+  if (now > h.reset) { h.n = 0; h.reset = now + windowMs; }
+  h.n++; hits.set(id, h);
+  return h.n > max;
+}
+const clientIp = (req) => (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+
+// Rotas abertas ao jogador: enviar pontuacao e ver ranking. Retorna true se tratou a requisicao.
+async function publicApi(req, res, rel, url) {
+  if (rel === '/api/ranking' && req.method === 'GET') {
+    const content = JSON.parse(await publicContent());
+    const limit = Math.min(300, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 10));
+    const only = url.searchParams.get('quizId');
+    const out = {};
+    for (const q of content.quizzes) if (!only || q.id === only) out[q.id] = await ranking.top(q.id, limit);
+    sendJson(res, 200, { ranking: out });
+    return true;
+  }
+  if (rel === '/api/score' && req.method === 'POST') {
+    if (limited(clientIp(req), 'score', 30, 600000)) { sendJson(res, 429, { error: 'Muitas pontuacoes enviadas.' }); return true; }
+    const b = await readJson(req, 2048);
+    const content = JSON.parse(await publicContent());
+    const quiz = content.quizzes.find((q) => q.id === b.quizId);
+    const name = ranking.cleanName(b.name);
+    const n = quiz ? quiz.questions.length : 0;
+    const ok = quiz && name && [b.points, b.correct, b.total, b.ms].every(Number.isInteger)
+      && b.total === n && b.correct >= 0 && b.correct <= n && b.points >= 0 && b.points <= 1000 * n && b.ms >= 0 && b.ms <= 86400000;
+    if (!ok) { sendJson(res, 400, { error: 'pontuacao invalida' }); return true; }
+    sendJson(res, 200, await ranking.add(quiz.id, { name, points: b.points, correct: b.correct, total: b.total, ms: b.ms }));
+    return true;
+  }
+  return false;
 }
 
 async function api(req, res, rel, url) {
@@ -78,6 +117,12 @@ async function api(req, res, rel, url) {
   if (rel === '/api/status' && req.method === 'GET') {
     const s = store.status();
     return sendJson(res, 200, { r2: s.ok, missing: s.missing, mediaBase: (process.env.MEDIA_BASE_URL || '').replace(/\/+$/, '') });
+  }
+
+  if (rel === '/api/ranking' && req.method === 'DELETE') {
+    const quizId = url.searchParams.get('quizId') || '';
+    if (url.searchParams.get('all')) await ranking.clear(quizId); else await ranking.remove(quizId, url.searchParams.get('id') || '');
+    return sendJson(res, 200, { ok: true });
   }
 
   const s = store.status();
@@ -162,7 +207,7 @@ http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
       return res.end(body);
     }
-    if (rel.indexOf('/api/') === 0) return await api(req, res, rel, url);
+    if (rel.indexOf('/api/') === 0) { if (await publicApi(req, res, rel, url)) return; return await api(req, res, rel, url); }
     return serveStatic(req, res, rel);
   } catch (e) {
     console.error(req.method, rel, e);
