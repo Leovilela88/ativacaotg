@@ -199,7 +199,7 @@
       p.sound && urlOf(p.sound) ? h('div', { class: 'prev' }, h('audio', { src: urlOf(p.sound), controls: '' })) : null,
       h('label', { class: 'lbl', text: 'Alternativas (marque a correta)' }), opts,
       p.options.length < 6 ? h('button', { class: 'btn small', text: 'Adicionar alternativa', onclick: function () { p.options.push(''); mark(); render(); } }) : null,
-      h('label', { class: 'lbl', text: 'Prêmio ao acertar (vídeo ou foto da resposta certa)' }),
+      h('label', { class: 'lbl', text: 'Vídeo ou foto da resposta certa (aparece ao acertar e também ao errar)' }),
       h('div', { class: 'row' }, sel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar novo arquivo', onclick: function () { file.click(); } }), file),
       preview(r.src),
       h('label', { class: 'lbl', text: 'Legenda (opcional)' }),

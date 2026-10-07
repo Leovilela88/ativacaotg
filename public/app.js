@@ -282,35 +282,37 @@
     return el('button', { text: last ? 'Ver resultado' : 'Próxima pergunta', onclick: function () { if (last) end(); else { qi++; question(); } } });
   }
 
-  // Errou ou o tempo acabou: 0 pontos, mostra a certa e segue (sem segunda chance).
-  function miss(q, kind) {
-    var time = kind === 'time';
-    var ico = svg(time
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>');
-    ico.className = 'tick bad';
-    render([
-      top(true), ico, el('p', { class: 'eyebrow bad', text: time ? 'Tempo esgotado' : 'Resposta incorreta' }),
-      el('p', { class: 'pts', text: '+ 0 pontos' }),
-      el('div', { class: 'reveal' }, [el('small', { text: 'A resposta certa era' }), el('b', { text: String.fromCharCode(65 + q.answer) + '. ' + q.options[q.answer] })]),
-      el('div', { class: 'actions' }, [nextBtn()])
-    ]);
-  }
+  function miss(q, kind) { outcome(q, kind === 'time' ? 'time' : 'wrong', 0); }
+  function reward(q, p) { outcome(q, 'ok', p); }
 
-  function reward(q, p) {
-    var r = q.reward || { type: 'text', caption: 'Resposta certa!' };
-    var cap = el('div', { class: 'cap', text: r.caption || 'Resposta certa!' });
+  // Resultado de uma pergunta (acertou, errou ou acabou o tempo). A foto/video da resposta certa
+  // aparece nos tres casos: quem errou tambem fica conhecendo o bicho.
+  function outcome(q, kind, p) {
+    var ok = kind === 'ok', time = kind === 'time';
+    var r = q.reward || {};
     var media = null;
-    if (r.type === 'image') media = el('img', { src: mediaUrl(r.src), alt: '' });
-    else if (r.type === 'video') {
+    if (r.src && r.type === 'image') media = el('img', { src: mediaUrl(r.src), alt: '' });
+    else if (r.src && r.type === 'video') {
       media = el('video', { src: mediaUrl(r.src), autoplay: '', playsinline: '', controls: '' });
       if (quiz.muteVideos) { media.setAttribute('muted', ''); media.muted = true; }   // quiz com videos sem som
     }
-    else if (r.type === 'audio') media = el('audio', { src: mediaUrl(r.src), autoplay: '', controls: '' });
+    else if (r.src && r.type === 'audio') media = el('audio', { src: mediaUrl(r.src), autoplay: '', controls: '' });
 
-    var tickIco = svg('<svg viewBox="0 0 24 24" fill="none" stroke="#4be08a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>');
-    tickIco.className = 'tick';
-    var info = [tickIco, el('p', { class: 'eyebrow ok', text: 'Resposta correta' }), el('p', { class: 'pts', text: '+ ' + fmt(p) + ' pontos' }), cap];
+    var ico = svg(ok
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="#4be08a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
+      : time
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="#ff6b57" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>');
+    ico.className = 'tick' + (ok ? '' : ' bad');
+    var detail = ok
+      ? el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })
+      : el('div', { class: 'reveal' }, [el('small', { text: 'A resposta certa era' }), el('b', { text: String.fromCharCode(65 + q.answer) + '. ' + q.options[q.answer] })]);
+    var info = [
+      ico,
+      el('p', { class: 'eyebrow ' + (ok ? 'ok' : 'bad'), text: ok ? 'Resposta correta' : time ? 'Tempo esgotado' : 'Resposta incorreta' }),
+      el('p', { class: 'pts', text: '+ ' + fmt(p) + ' pontos' }),
+      detail
+    ];
     var nextB = nextBtn(), nextLabel = nextB.textContent, actions = el('div', { class: 'actions' }, [nextB]);
 
     // Premio em video: o botao so libera 5 s depois que o video comeca a tocar (a pessoa assiste o inicio).
@@ -350,9 +352,7 @@
       gate();
       return;
     }
-    if (media) {
-      media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
-    }
+    if (media) media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
     render([top(true)].concat(info, media ? [media] : [], [actions]));
   }
 
