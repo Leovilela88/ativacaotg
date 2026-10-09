@@ -129,6 +129,7 @@
       h('label', { class: 'row', style: 'margin-top:12px;cursor:pointer' },
         h('input', { type: 'checkbox', checked: !!quiz.muteVideos, style: 'width:20px;height:20px;accent-color:#c6f432', onchange: function (e) { if (e.target.checked) quiz.muteVideos = true; else delete quiz.muteVideos; mark(); } }),
         h('span', { text: 'Vídeos do prêmio sem som (o áudio dos arquivos não toca neste quiz)' })),
+      copyBox(quiz),
       h('div', { style: 'margin-top:14px' }, h('button', { class: 'btn danger small', text: 'Excluir este quiz', onclick: function () {
         if (confirm('Excluir o quiz "' + quiz.title + '" e todas as suas perguntas?')) { c.quizzes.splice(S.qi, 1); mark(); render(); }
       } })));
@@ -138,6 +139,24 @@
       quiz.questions.push({ text: '', options: ['', '', '', ''], answer: 0, reward: { src: '', caption: '' } }); mark(); render(); window.scrollTo(0, document.body.scrollHeight);
     } });
     return h('div', { class: 'layout' }, side, h('div', {}, head, cards, add));
+  }
+
+  // Copia o quiz inteiro para outra ativacao (perguntas, regras e midias). Id novo = ranking vazio.
+  function copyBox(quiz) {
+    var others = S.content.activations.map(function (a, i) { return { a: a, i: i }; }).filter(function (x) { return x.i !== S.act; });
+    var sel = h('select', { style: 'max-width:260px' }, others.map(function (x) { return h('option', { value: String(x.i), text: actName(x.a) }); }));
+    return h('div', {},
+      h('label', { class: 'lbl', text: 'Copiar este quiz para outra ativação' }),
+      h('div', { class: 'row' }, sel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Copiar quiz', onclick: function () {
+        var to = parseInt(sel.value, 10), dest = S.content.activations[to];
+        if (!dest || !confirm('Copiar "' + quiz.title + '" (' + quiz.questions.length + ' perguntas) para ' + actName(dest) + '?')) return;
+        var c = JSON.parse(JSON.stringify(quiz));
+        c.id = 'quiz-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+        dest.quizzes.push(c);
+        S.act = to; S.qi = dest.quizzes.length - 1; S.rq = 0; S.rank = null; S.tab = 'perguntas';
+        mark(); render(); say('Quiz copiado para ' + actName(dest) + '. Clique em Salvar alterações.', 'dirty');
+      } })),
+      h('p', { class: 'hint', text: 'A cópia começa com o ranking vazio e usa as mesmas mídias. Depois é só editar.' }));
   }
 
   function numField(label, cur, min, max, onSet) {
