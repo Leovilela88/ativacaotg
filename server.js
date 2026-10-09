@@ -65,6 +65,7 @@ function validateQuiz(q) {
       if (typeof p.text !== 'string' || (!p.text.trim() && !p.sound)) return 'pergunta sem texto em "' + q.title + '"';
       if (!Array.isArray(p.options) || p.options.length < 2 || p.options.length > 8 || p.options.some((o) => typeof o !== 'string' || !o.trim())) return 'alternativas invalidas em "' + q.title + '"';
       if (!Number.isInteger(p.answer) || p.answer < 0 || p.answer >= p.options.length) return 'resposta certa invalida em "' + q.title + '"';
+      if (p.images != null && (!Array.isArray(p.images) || p.images.length > p.options.length || p.images.some((x) => typeof x !== 'string'))) return 'fotos das alternativas invalidas em "' + q.title + '"';
       if (p.reward && (!kinds.includes(p.reward.type) || (p.reward.src && typeof p.reward.src !== 'string'))) return 'premio invalido em "' + q.title + '"';
     }
   }

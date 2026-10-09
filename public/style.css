@@ -232,3 +232,10 @@ button.ghost { padding: 1.8vmin 4vmin; justify-content: center; font-size: 2.3vm
   .rwd-media video, .rwd-media img { max-height: 42vh; max-width: 86vw; }
   .rwd-info { max-width: 92vw; }
 }
+
+/* foto pequena na alternativa (no lugar da letra) */
+.opts button.has-pic { padding: 1.1vmin 3vmin 1.1vmin 1.2vmin; }
+.pic { flex: 0 0 auto; width: 9vmin; height: 9vmin; margin-right: 2.4vmin; object-fit: cover; border-radius: 1.8vmin; background: #000; border: .2vmin solid rgba(255, 255, 255, .3); }
+button:focus .pic, button:active .pic { border-color: var(--ink); }
+.opts button.gone .pic { filter: grayscale(1); }
+.revimg { display: block; width: 14vmin; height: 14vmin; margin: 1.4vmin auto 0; object-fit: cover; border-radius: 2vmin; border: .25vmin solid rgba(255, 255, 255, .35); }

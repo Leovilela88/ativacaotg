@@ -179,13 +179,28 @@
     var r = p.reward;
     function move(d) { var j = pi + d; if (j < 0 || j >= quiz.questions.length) return; var t = quiz.questions[pi]; quiz.questions[pi] = quiz.questions[j]; quiz.questions[j] = t; mark(); render(); }
 
+    p.images = alignImgs(p);
     var opts = p.options.map(function (o, i) {
-      return h('div', { class: 'opt' },
+      var imgKey = p.images[i], imgUrl = imgKey ? urlOf(imgKey) : '';
+      var photoSel = h('select', { class: 'photosel', title: 'Foto desta alternativa', onchange: function (e) { p.images[i] = e.target.value; mark(); render(); } },
+        h('option', { value: '', text: 'Sem foto' }),
+        mediaOptions(imgKey, 'image').map(function (k) { return h('option', { value: k, selected: imgKey === k, text: k }); }));
+      var photoFile = h('input', { type: 'file', accept: 'image/*', style: 'display:none', onchange: function (e) {
+        var f = e.target.files[0]; if (!f) return;
+        say('Reduzindo e enviando a foto...', 'dirty');
+        makeThumb(f).then(function (small) { return uploadMany([small]); })
+          .then(function (keys) { if (keys.length) { p.images[i] = keys[0]; mark(); } render(); })
+          .catch(function (er) { say('Foto: ' + er.message, 'err'); });
+      } });
+      return h('div', { class: 'opt optrow' },
         h('input', { type: 'radio', name: 'ans-' + S.act + '-' + S.qi + '-' + pi, checked: p.answer === i, title: 'Resposta correta', onchange: function () { p.answer = i; mark(); } }),
         h('span', { class: 'letter', text: String.fromCharCode(65 + i) }),
         h('input', { type: 'text', value: o, placeholder: 'Alternativa ' + String.fromCharCode(65 + i), oninput: function (e) { p.options[i] = e.target.value; mark(); } }),
+        imgUrl ? h('img', { class: 'optimg', src: imgUrl, alt: '' }) : null,
+        photoSel,
+        h('button', { class: 'btn small', text: 'Enviar foto', onclick: function () { photoFile.click(); } }), photoFile,
         p.options.length > 2 ? h('button', { class: 'btn small', text: 'Remover', onclick: function () {
-          p.options.splice(i, 1); if (p.answer === i) p.answer = 0; else if (p.answer > i) p.answer--; mark(); render();
+          p.options.splice(i, 1); p.images.splice(i, 1); if (p.answer === i) p.answer = 0; else if (p.answer > i) p.answer--; mark(); render();
         } }) : null);
     });
 
@@ -218,13 +233,37 @@
       h('label', { class: 'lbl', text: 'Áudio do canto (toca ao abrir a pergunta; deixe sem áudio para pergunta comum)' }),
       h('div', { class: 'row' }, soundSel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar áudio', onclick: function () { soundFile.click(); } }), soundFile),
       p.sound && urlOf(p.sound) ? h('div', { class: 'prev' }, h('audio', { src: urlOf(p.sound), controls: '' })) : null,
-      h('label', { class: 'lbl', text: 'Alternativas (marque a correta)' }), opts,
-      p.options.length < 6 ? h('button', { class: 'btn small', text: 'Adicionar alternativa', onclick: function () { p.options.push(''); mark(); render(); } }) : null,
+      h('label', { class: 'lbl', text: 'Alternativas (marque a correta). A foto pequena substitui a letra no jogo.' }), opts,
+      p.options.length < 6 ? h('button', { class: 'btn small', text: 'Adicionar alternativa', onclick: function () { p.options.push(''); p.images.push(''); mark(); render(); } }) : null,
       h('label', { class: 'lbl', text: 'Vídeo ou foto da resposta certa (aparece ao acertar e também ao errar)' }),
       h('div', { class: 'row' }, sel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar novo arquivo', onclick: function () { file.click(); } }), file),
       preview(r.src),
       h('label', { class: 'lbl', text: 'Legenda (opcional)' }),
       h('input', { type: 'text', value: r.caption || '', placeholder: 'Ex.: Acertou! É o Dourado.', oninput: function (e) { r.caption = e.target.value; mark(); } }));
+  }
+  function alignImgs(p) {
+    var a = Array.isArray(p.images) ? p.images.slice() : [];
+    while (a.length < p.options.length) a.push('');
+    a.length = p.options.length;
+    return a;
+  }
+  // Reduz a foto (ate 480 px, JPEG) antes de enviar: miniaturas leves carregam rapido na TV.
+  function makeThumb(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var r = Math.min(1, 480 / Math.max(img.width, img.height));
+        var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * r)); c.height = Math.max(1, Math.round(img.height * r));
+        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(function (b) {
+          URL.revokeObjectURL(url);
+          if (!b) return reject(new Error('não foi possível reduzir a foto'));
+          resolve(new File([b], file.name.replace(/\.[^.]+$/, '') + '-mini.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
+      img.src = url;
+    });
   }
   function mediaOptions(current, type) {
     var keys = S.media.map(function (m) { return m.key; }).filter(function (k) { return !type || typeOf(k) === type; });
@@ -244,6 +283,7 @@
       if (r.src) { p.reward = { type: typeOf(r.src), src: r.src }; if (cap) p.reward.caption = cap; }
       else if (cap) p.reward = { type: 'text', caption: cap };
       else delete p.reward;
+      if (Array.isArray(p.images) && p.images.some(Boolean)) p.images = alignImgs(p); else delete p.images;
     }); }); });
     return c;
   }

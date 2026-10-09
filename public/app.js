@@ -163,8 +163,15 @@
     var clock = el('div', { class: 'clock' }, [el('div', { class: 'cbar' }, [bar]), secs]);
 
     q.options.forEach(function (label, i) {
-      var b = el('button', {}, [
-        el('span', { class: 'badge', text: String.fromCharCode(65 + i) }),
+      // Foto pequena da alternativa (ex.: a ave) no lugar da letra; sem foto, fica a letra.
+      var badge = el('span', { class: 'badge', text: String.fromCharCode(65 + i) });
+      var picKey = q.images && q.images[i], pic = null;
+      if (picKey) {
+        pic = el('img', { class: 'pic', src: mediaUrl(picKey), alt: '' });
+        pic.addEventListener('error', function () { if (pic.parentNode) { pic.parentNode.replaceChild(badge, pic); b.classList.remove('has-pic'); } });
+      }
+      var b = el('button', { class: pic ? 'has-pic' : '' }, [
+        pic || badge,
         el('span', { class: 'label', text: label })
       ]);
       b.addEventListener('click', function () {
@@ -278,7 +285,7 @@
       setTimeout(function () {
         if (tok !== screenToken) return;
         var pool = cand.slice();
-        for (var k = 0; k < count; k++) { var t = pool.splice(rnd(pool.length), 1)[0]; btns[t].className = 'gone'; btns[t].disabled = true; }
+        for (var k = 0; k < count; k++) { var t = pool.splice(rnd(pool.length), 1)[0]; btns[t].classList.add('gone'); btns[t].disabled = true; }
         if (ov.parentNode) ov.parentNode.removeChild(ov);
         onDone();
       }, 1400);
@@ -316,7 +323,9 @@
     ico.className = 'tick' + (ok ? '' : ' bad');
     var detail = ok
       ? el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })
-      : el('div', { class: 'reveal' }, [el('small', { text: 'A resposta certa era' }), el('b', { text: String.fromCharCode(65 + q.answer) + '. ' + q.options[q.answer] })]);
+      : el('div', { class: 'reveal' }, [el('small', { text: 'A resposta certa era' })].concat(
+          (q.images && q.images[q.answer]) ? [el('img', { class: 'revimg', src: mediaUrl(q.images[q.answer]), alt: '' }), el('b', { text: q.options[q.answer] })]
+                                           : [el('b', { text: String.fromCharCode(65 + q.answer) + '. ' + q.options[q.answer] })]));
     var info = [
       ico,
       el('p', { class: 'eyebrow ' + (ok ? 'ok' : 'bad'), text: ok ? 'Resposta correta' : time ? 'Tempo esgotado' : 'Resposta incorreta' }),
