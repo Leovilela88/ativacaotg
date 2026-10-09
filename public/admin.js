@@ -166,11 +166,11 @@
       } }));
   }
   function lifeField(quiz, key, label) {
-    var cur = quiz.lifelines && quiz.lifelines[key] != null ? quiz.lifelines[key] : 1;
+    var cur = quiz.lifelines && quiz.lifelines[key] != null ? quiz.lifelines[key] : 3;
     return h('label', { class: 'row', style: 'flex:1' }, h('span', { class: 'hint', style: 'white-space:nowrap', text: label }),
       h('input', { type: 'number', min: '0', max: '9', value: String(cur), style: 'width:80px', oninput: function (e) {
         var n = Math.max(0, Math.min(9, parseInt(e.target.value, 10) || 0));
-        quiz.lifelines = quiz.lifelines || { skip: 1, fifty: 1 }; quiz.lifelines[key] = n; mark();
+        quiz.lifelines = quiz.lifelines || { fifty: 3 }; quiz.lifelines[key] = n; mark();
       } }));
   }
 

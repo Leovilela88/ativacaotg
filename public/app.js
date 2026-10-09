@@ -122,7 +122,7 @@
     }
     function add(ch) { if (name.length < 16) { name += ch; paint(); } }
     function del() { name = name.slice(0, -1); paint(); }
-    var rows = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map(function (r) {
+    var rows = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'].map(function (r) {
       return el('div', { class: 'krow' }, r.split('').map(function (ch) {
         return el('button', { class: 'key', text: ch, onclick: function () { add(ch); } });
       }));
@@ -142,7 +142,7 @@
       var k = e.keyCode, c = e.key || '';
       if (k === 8) { del(); e.preventDefault(); return true; }
       if (k === 32) { add(' '); e.preventDefault(); return true; }
-      if (c.length === 1 && /[A-Za-zÀ-ÿ]/.test(c)) { add(c.toUpperCase()); e.preventDefault(); return true; }
+      if (c.length === 1 && /[A-Za-zÀ-ÿ0-9]/.test(c)) { add(c.toUpperCase()); e.preventDefault(); return true; }
       return false;
     };
   }
@@ -150,7 +150,7 @@
   function startGame() {
     qi = 0; correct = 0; pts = 0; spent = 0;
     var l = quiz.lifelines || {};
-    fifty = l.fifty == null ? 1 : l.fifty;
+    fifty = l.fifty == null ? 3 : l.fifty;      // 3 usos de "Eliminar" por partida (ajustavel no admin)
     question();
   }
 
