@@ -1,47 +1,64 @@
 {
   "idleSeconds": 60,
-  "quizzes": [
+  "activations": [
     {
       "id": "peixes",
-      "title": "Peixes",
-      "subtitle": "Quanto você sabe sobre os peixes?",
-      "muteVideos": true,
-      "questions": [
+      "title": "Ativação Peixes São Carlos",
+      "quizzes": [
         {
-          "text": "É um dos grandes predadores dos rios do interior de São Paulo e pode ser encontrado em bacias hidrográficas da região de São Carlos. Conhecido pela força, pelo comportamento predador e pela coloração dourada, é muito procurado por pescadores esportivos. Que peixe é esse?",
-          "options": [
-            "Piracanjuba",
-            "Dourado",
-            "Piapara",
-            "Tabarana"
-          ],
-          "answer": 1,
-          "reward": {
-            "type": "text",
-            "caption": "Acertou! É o Dourado."
-          }
+          "id": "peixes",
+          "title": "Peixes",
+          "subtitle": "Quanto você sabe sobre os peixes?",
+          "muteVideos": true,
+          "questions": [
+            {
+              "text": "É um dos grandes predadores dos rios do interior de São Paulo e pode ser encontrado em bacias hidrográficas da região de São Carlos. Conhecido pela força, pelo comportamento predador e pela coloração dourada, é muito procurado por pescadores esportivos. Que peixe é esse?",
+              "options": [
+                "Piracanjuba",
+                "Dourado",
+                "Piapara",
+                "Tabarana"
+              ],
+              "answer": 1,
+              "reward": {
+                "type": "text",
+                "caption": "Acertou! É o Dourado."
+              }
+            }
+          ]
         }
       ]
     },
     {
       "id": "aves",
-      "title": "Aves",
-      "subtitle": "Adivinhe pelo canto",
-      "questions": [
+      "title": "Ativação Aves São Carlos",
+      "quizzes": [
         {
-          "text": "Pergunta de teste: qual é a resposta certa?",
-          "options": [
-            "Opção A (certa)",
-            "Opção B",
-            "Opção C"
-          ],
-          "answer": 0,
-          "reward": {
-            "type": "text",
-            "caption": "Acertou!"
-          }
+          "id": "aves",
+          "title": "Aves",
+          "subtitle": "Adivinhe pelo canto",
+          "questions": [
+            {
+              "text": "Pergunta de teste: qual é a resposta certa?",
+              "options": [
+                "Opção A (certa)",
+                "Opção B",
+                "Opção C"
+              ],
+              "answer": 0,
+              "reward": {
+                "type": "text",
+                "caption": "Acertou!"
+              }
+            }
+          ]
         }
       ]
+    },
+    {
+      "id": "projeta",
+      "title": "Ativação Projeta 2026",
+      "quizzes": []
     }
   ]
 }

@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   var root = document.getElementById('root');
-  var S = { status: null, content: null, media: [], tab: 'perguntas', qi: 0, dirty: false, msg: '', kind: '', uploads: [] };
+  var S = { status: null, content: null, media: [], tab: 'perguntas', act: 0, qi: 0, dirty: false, msg: '', kind: '', uploads: [] };
   var IMG = ['jpg', 'jpeg', 'png', 'webp', 'gif'], VID = ['mp4', 'webm', 'mov'], AUD = ['mp3', 'm4a', 'ogg', 'wav'];
 
   // ---------- utilidades ----------
@@ -29,6 +29,8 @@
   var KIND = { image: 'foto', video: 'video', audio: 'som', text: '' };
   function size(b) { return b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'; }
   function urlOf(key) { var b = S.status && S.status.mediaBase; return b ? b + '/' + key : ''; }
+  function curAct() { return S.content.activations[S.act] || S.content.activations[0]; }
+  function actName(a) { return String(a.title || a.id).replace(/^Ativação\s+/i, ''); }
   function say(msg, kind) { S.msg = msg; S.kind = kind || ''; var el = document.getElementById('msg'); if (el) { el.textContent = msg; el.className = 'msg ' + S.kind; } }
 
   function api(method, url, body) {
@@ -99,13 +101,13 @@
     return h('header', { class: 'bar' }, h('img', { src: 'img/logo.png', alt: '' }), h('h1', { text: 'Admin' }),
       h('span', { class: 'chip ' + (S.status.r2 ? 'ok' : 'bad'), text: S.status.r2 ? 'R2 conectado' : 'R2 pendente' }),
       h('span', { class: 'chip ' + (S.status.mediaBase ? 'ok' : 'bad'), text: S.status.mediaBase ? 'URL pública ok' : 'Sem URL pública' }),
-      h('a', { class: 'btn small', href: '/', target: '_blank', text: 'Ver site' }),
+      h('a', { class: 'btn small', href: '/', text: 'Menu principal' }),
       h('button', { class: 'btn small', onclick: function () { api('POST', '/api/logout').then(function () { S.status = null; render(); }); }, text: 'Sair' }));
   }
 
   // ---------- aba Perguntas ----------
   function viewQuestions() {
-    var c = S.content;
+    var c = curAct();
     if (S.qi >= c.quizzes.length) S.qi = Math.max(0, c.quizzes.length - 1);
     var quiz = c.quizzes[S.qi];
     var side = h('div', { class: 'side' },
@@ -160,7 +162,7 @@
 
     var opts = p.options.map(function (o, i) {
       return h('div', { class: 'opt' },
-        h('input', { type: 'radio', name: 'ans-' + S.qi + '-' + pi, checked: p.answer === i, title: 'Resposta correta', onchange: function () { p.answer = i; mark(); } }),
+        h('input', { type: 'radio', name: 'ans-' + S.act + '-' + S.qi + '-' + pi, checked: p.answer === i, title: 'Resposta correta', onchange: function () { p.answer = i; mark(); } }),
         h('span', { class: 'letter', text: String.fromCharCode(65 + i) }),
         h('input', { type: 'text', value: o, placeholder: 'Alternativa ' + String.fromCharCode(65 + i), oninput: function (e) { p.options[i] = e.target.value; mark(); } }),
         p.options.length > 2 ? h('button', { class: 'btn small', text: 'Remover', onclick: function () {
@@ -218,12 +220,12 @@
 
   function toSave() {
     var c = JSON.parse(JSON.stringify(S.content));
-    c.quizzes.forEach(function (q) { q.questions.forEach(function (p) {
+    c.activations.forEach(function (a) { a.quizzes.forEach(function (q) { q.questions.forEach(function (p) {
       var r = p.reward || {}, cap = (r.caption || '').trim();
       if (r.src) { p.reward = { type: typeOf(r.src), src: r.src }; if (cap) p.reward.caption = cap; }
       else if (cap) p.reward = { type: 'text', caption: cap };
       else delete p.reward;
-    }); });
+    }); }); });
     return c;
   }
   function save() {
@@ -259,7 +261,7 @@
 
   // ---------- aba Ranking ----------
   function loadRank() {
-    var q = S.content.quizzes[S.rq || 0];
+    var q = curAct().quizzes[S.rq || 0];
     if (!q) { S.rank = []; return Promise.resolve(); }
     return api('GET', '/api/admin/ranking?quizId=' + encodeURIComponent(q.id)).then(function (j) { S.rank = j.entries || []; }).catch(function () { S.rank = []; });
   }
@@ -272,8 +274,8 @@
     a.download = 'ranking-' + qz.id + '.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   }
   function viewRanking() {
-    var c = S.content, qz = c.quizzes[S.rq || 0];
-    if (!qz) return h('p', { class: 'hint', text: 'Crie um quiz primeiro.' });
+    var c = curAct(), qz = c.quizzes[S.rq || 0];
+    if (!qz) return h('p', { class: 'hint', text: 'Esta ativação ainda não tem quiz. Crie um na aba Perguntas.' });
     var sel = h('select', { style: 'max-width:320px', onchange: function (e) { S.rq = parseInt(e.target.value, 10); S.rank = null; render(); loadRank().then(render); } },
       c.quizzes.map(function (q, i) { return h('option', { value: String(i), selected: i === (S.rq || 0), text: q.title }); }));
     var head = h('div', { class: 'row', style: 'justify-content:space-between;margin-bottom:14px' }, sel,
@@ -310,9 +312,21 @@
       wrap.appendChild(h('div', { class: 'notice' }, 'O R2 ainda não está configurado. No Railway, defina as variáveis: ' + S.status.missing.join(', ') + '.'));
     } else {
       if (!S.status.mediaBase) wrap.appendChild(h('div', { class: 'notice' }, 'Defina MEDIA_BASE_URL no Railway (endereço público do bucket) para as mídias aparecerem no site e nas prévias.'));
-      wrap.appendChild(h('div', { class: 'tabs' },
-        ['perguntas', 'midias', 'ranking'].map(function (t) { return h('button', { class: S.tab === t ? 'on' : '', text: t === 'perguntas' ? 'Perguntas' : t === 'midias' ? 'Mídias' : 'Ranking', onclick: function () { S.tab = t; if (t === 'ranking') { S.rank = null; render(); loadRank().then(render); } else render(); } }); })));
-      wrap.appendChild(S.tab === 'perguntas' ? viewQuestions() : S.tab === 'midias' ? viewMedia() : viewRanking());
+      var acts = S.content.activations;
+      wrap.appendChild(h('div', { class: 'tabs' }, acts.map(function (a, i) {
+        return h('button', { class: S.tab !== 'midias' && S.act === i ? 'on' : '', text: actName(a), onclick: function () {
+          S.act = i; S.qi = 0; S.rq = 0; S.rank = null; if (S.tab === 'midias') S.tab = 'perguntas';
+          if (S.tab === 'ranking') { render(); loadRank().then(render); } else render();
+        } });
+      }).concat([h('button', { class: S.tab === 'midias' ? 'on' : '', text: 'Mídias', onclick: function () { S.tab = 'midias'; render(); } })])));
+      if (S.tab !== 'midias') {
+        var link = location.origin + '/' + curAct().id;
+        wrap.appendChild(h('div', { class: 'tabs sub' },
+          ['perguntas', 'ranking'].map(function (t) { return h('button', { class: S.tab === t ? 'on' : '', text: t === 'perguntas' ? 'Perguntas' : 'Ranking', onclick: function () { S.tab = t; if (t === 'ranking') { S.rank = null; render(); loadRank().then(render); } else render(); } }); }),
+          h('span', { class: 'hint linkrow' }, 'Link para as telas: ', h('a', { href: link, target: '_blank', text: link }),
+            h('button', { class: 'btn small', text: 'Copiar', onclick: function (e) { if (navigator.clipboard) navigator.clipboard.writeText(link); e.target.textContent = 'Copiado'; } }))));
+      }
+      wrap.appendChild(S.tab === 'midias' ? viewMedia() : S.tab === 'perguntas' ? viewQuestions() : viewRanking());
     }
     root.appendChild(wrap);
     if (S.status.r2 && S.tab === 'perguntas') {

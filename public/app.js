@@ -3,6 +3,11 @@
 (function () {
   var app = document.getElementById('app');
   var data = null, quiz = null, qi = 0, correct = 0, pts = 0, spent = 0, fifty = 0;
+  // Cada ativacao (/peixes, /aves, /projeta) e um app fechado: so enxerga os proprios quizzes e o proprio ranking.
+  var seg = location.pathname.split('/')[1] || '';
+  if (/\./.test(seg)) seg = '';   // ex.: /index.html nao e uma ativacao
+  var ACT = (seg || (/[?&]a=([a-z0-9-]+)/.exec(location.search) || [])[1] || '').toLowerCase();
+  var actTitle = '';
   var player = '', idleTimer = null, tick = null, onKey = null, screenToken = 0;
 
   // ---------- helpers ----------
@@ -82,6 +87,11 @@
   // ---------- telas ----------
   function home() {
     quiz = null; qi = 0;
+    if (!data.quizzes.length) {
+      render([el('img', { class: 'logo', src: 'img/logo.png', alt: 'Terra da Gente' }), el('div', { class: 'rule' }),
+        el('p', { class: 'eyebrow', text: actTitle }), el('p', { class: 'sub', text: 'Conteúdo em preparação. Volte em instantes.' })], -1);
+      return;
+    }
     var cards = el('div', { class: 'cards' }, data.quizzes.map(function (q, i) {
       return el('button', { onclick: function () { nameScreen(q); } }, [
         el('span', { class: 'num', text: pad(i + 1) }),
@@ -92,7 +102,7 @@
     render([
       el('img', { class: 'logo', src: 'img/logo.png', alt: 'Terra da Gente' }),
       el('div', { class: 'rule' }),
-      el('p', { class: 'eyebrow', text: 'Escolha um quiz' }),
+      el('p', { class: 'eyebrow', text: actTitle || 'Escolha um quiz' }),
       cards,
       el('div', { class: 'actions' }, [el('button', { class: 'ghost', text: 'Ver ranking', onclick: function () { rankingScreen(null, null); } })])
     ]);
@@ -382,11 +392,11 @@
   }
 
   function rankingScreen(quizId, highlight) {
-    var id = quizId || data.quizzes[0].id;
+    var id = quizId || (data.quizzes[0] && data.quizzes[0].id) || '';
     render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), el('p', { class: 'sub', text: 'Carregando...' })]);
-    ajax('GET', 'api/ranking?limit=100&_=' + Date.now(), null, function (r) {
+    ajax('GET', 'api/ranking?activation=' + encodeURIComponent(ACT) + '&limit=100&_=' + Date.now(), null, function (r) {
       var all = (r && r.ranking) || {};
-      var tabs = el('div', { class: 'tabs' }, data.quizzes.map(function (q) {
+      var tabs = el('div', { class: 'tabs' }, data.quizzes.length < 2 ? [] : data.quizzes.map(function (q) {
         return el('button', { class: 'tab' + (q.id === id ? ' on' : ''), text: q.title, onclick: function () { rankingScreen(q.id, highlight); } });
       }));
       var list = all[id] || [], board = el('div', { class: 'board', tabindex: '0' });
@@ -470,8 +480,22 @@
   }
 
   // ---------- boot ----------
-  ajax('GET', 'data/quiz.json?_=' + Date.now(), null, function (j) {
-    if (!j) { app.textContent = 'Erro ao carregar o conteúdo.'; return; }
-    data = j; home(); bumpIdle();
+  // Atalho escondido: segurar ~1,8 s o canto inferior direito leva ao menu principal (que ainda pede a senha).
+  (function () {
+    var hm = document.getElementById('hm'), t1 = null, t2 = null;
+    if (!hm) return;
+    function stop() { clearTimeout(t1); clearTimeout(t2); hm.className = ''; }
+    function begin() { stop(); t2 = setTimeout(function () { hm.className = 'show'; }, 700); t1 = setTimeout(function () { location.href = '/'; }, 1800); }
+    ['mousedown', 'touchstart'].forEach(function (ev) { hm.addEventListener(ev, begin); });
+    ['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(function (ev) { hm.addEventListener(ev, stop); });
+    hm.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  })();
+
+  if (!ACT) { app.textContent = 'Endereço sem ativação. Peça o link correto.'; return; }
+  ajax('GET', 'api/activation?id=' + encodeURIComponent(ACT) + '&_=' + Date.now(), null, function (j) {
+    if (!j) { app.textContent = 'Ativação não encontrada ou sem conexão.'; return; }
+    data = { idleSeconds: j.idleSeconds, quizzes: j.quizzes || [] }; actTitle = j.title || '';
+    if (actTitle) document.title = actTitle + ' - Terra da Gente';
+    home(); bumpIdle();
   });
 })();

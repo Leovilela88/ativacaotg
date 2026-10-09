@@ -1,0 +1,19 @@
+/* Menu principal (so o dono acessa): reaproveita o tema do jogo. */
+.mrow { display: flex; align-items: stretch; width: min(90vw, 100vmin); margin-bottom: 2.2vmin; }
+.mrow .main { flex: 1 1 auto; margin: 0; }
+.mrow .copy { flex: 0 0 auto; margin: 0 0 0 1.6vmin; padding: 0 3vmin; justify-content: center; font-size: 2.1vmin; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; }
+.cards .label small code { font-family: inherit; opacity: .9; }
+.pw { width: min(80vw, 60vmin); margin-bottom: 2.4vmin; padding: 2.2vmin 3vmin; font: inherit; font-size: 3vmin; color: #fff; text-align: center; letter-spacing: .08em;
+  background: rgba(4, 20, 11, .6); border: .25vmin solid rgba(198, 244, 50, .6); border-radius: 2.4vmin; outline: none; }
+.err { color: var(--bad); min-height: 3.6vmin; margin: 0 0 2vmin; font-size: 2.4vmin; }
+.foot { display: flex; justify-content: center; flex-wrap: wrap; margin-top: 1vmin; }
+.foot a.ghost { padding: 1.8vmin 4vmin; font-size: 2.3vmin; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; border: .2vmin dashed rgba(255, 255, 255, .3); border-radius: 2.2vmin; background: rgba(8, 36, 19, .5); }
+.foot button, .foot a.ghost { margin: 0 1vmin 1.4vmin; text-decoration: none; display: flex; align-items: center; color: #fff; }
+
+/* compacto: as 3 ativacoes cabem sem rolar */
+.logo { width: min(30vmin, 60vw); margin-top: 0; }
+.rule { margin: 2.4vmin 0 2.2vmin; }
+.cards .label b { font-size: 2.9vmin; letter-spacing: .04em; }
+.cards button { padding: 2.2vmin 3vmin; }
+.mrow { margin-bottom: 1.8vmin; }
+.mrow .copy { font-size: 1.9vmin; }

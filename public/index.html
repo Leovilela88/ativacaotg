@@ -2,9 +2,11 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Terra da Gente</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script>(function(){var m=/^\/([a-z0-9-]+)/.exec(location.pathname);var l=document.querySelector('link[rel=manifest]');if(m&&l)l.href='/manifest/'+m[1]+'.webmanifest';})();</script>
 <link rel="apple-touch-icon" href="img/icon-192.png">
 <meta name="theme-color" content="#06130b">
 <meta name="mobile-web-app-capable" content="yes">
@@ -20,6 +22,7 @@
 <div id="bg"></div>
 <div id="shade"></div>
 <div id="app" role="application"></div>
+<div id="hm" aria-hidden="true"></div>
 <button id="fs" type="button" tabindex="-1" aria-label="Tela cheia" hidden></button>
 <script src="config.js"></script>
 <script src="app.js"></script>

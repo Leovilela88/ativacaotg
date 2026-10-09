@@ -5,6 +5,7 @@ const path = require('path');
 const auth = require('./lib/auth');
 const store = require('./lib/store');
 const ranking = require('./lib/ranking');
+const content = require('./lib/content');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = path.join(__dirname, 'public');
@@ -33,10 +34,28 @@ function readJson(req, limit) {
 
 // Valida a estrutura do conteúdo antes de gravar (o app público depende dela).
 function validateContent(c) {
-  if (!c || !Array.isArray(c.quizzes) || c.quizzes.length > 50) return 'estrutura invalida';
+  if (!c || !Array.isArray(c.activations) || c.activations.length > content.IDS.length) return 'estrutura invalida';
+  const seenAct = new Set(), seenQuiz = new Set();
+  for (const a of c.activations) {
+    if (!a || !content.IDS.includes(a.id) || seenAct.has(a.id)) return 'ativacao invalida';
+    seenAct.add(a.id);
+    if (a.title != null && typeof a.title !== 'string') return 'titulo da ativacao invalido';
+    if (!Array.isArray(a.quizzes) || a.quizzes.length > 30) return 'quizzes invalidos em "' + a.id + '"';
+    for (const q of a.quizzes) {
+      if (!q || typeof q.id !== 'string' || !q.id) return 'quiz sem id';
+      if (seenQuiz.has(q.id)) return 'id de quiz repetido: ' + q.id;   // o ranking de cada quiz depende de id unico
+      seenQuiz.add(q.id);
+      const err = validateQuiz(q);
+      if (err) return err;
+    }
+  }
+  return null;
+}
+
+function validateQuiz(q) {
   const kinds = ['image', 'video', 'audio', 'text'];
-  for (const q of c.quizzes) {
-    if (typeof q.id !== 'string' || typeof q.title !== 'string' || !q.title.trim()) return 'todo quiz precisa de titulo';
+  {
+    if (typeof q.title !== 'string' || !q.title.trim()) return 'todo quiz precisa de titulo';
     if (!Array.isArray(q.questions)) return 'quiz sem lista de perguntas';
     if (q.muteVideos != null && typeof q.muteVideos !== 'boolean') return 'opcao de video invalida em "' + q.title + '"';
     if (q.timeLimit != null && !(Number.isInteger(q.timeLimit) && q.timeLimit >= 5 && q.timeLimit <= 300)) return 'tempo por pergunta invalido em "' + q.title + '" (5 a 300 s)';
@@ -53,12 +72,15 @@ function validateContent(c) {
 }
 
 const FALLBACK = path.join(ROOT, 'data', 'quiz.json');
+// Sempre devolve o conteudo no formato novo (ativacoes), venha ele do R2, do arquivo local ou do formato antigo.
 async function publicContent() {
+  let raw = null;
   if (store.status().ok) {
-    try { const c = await store.getContent(); if (c) return JSON.stringify(c); }
+    try { raw = await store.getContent(); }
     catch (e) { console.error('R2 indisponivel, usando arquivo local:', e.message); }
   }
-  return fs.readFileSync(FALLBACK, 'utf8');
+  if (!raw) raw = JSON.parse(fs.readFileSync(FALLBACK, 'utf8'));
+  return JSON.stringify(content.normalize(raw));
 }
 
 // Limite simples por IP para rotas publicas (evita enchente de pontuacoes).
@@ -74,19 +96,27 @@ const clientIp = (req) => (req.headers['x-forwarded-for'] || req.socket.remoteAd
 // Rotas abertas ao jogador: enviar pontuacao e ver ranking. Retorna true se tratou a requisicao.
 async function publicApi(req, res, rel, url) {
   if (rel === '/api/ranking' && req.method === 'GET') {
-    const content = JSON.parse(await publicContent());
+    const c = JSON.parse(await publicContent());
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit'), 10) || 10));
-    const only = url.searchParams.get('quizId');
+    const only = url.searchParams.get('quizId'), act = url.searchParams.get('activation');
     const out = {};
-    for (const q of content.quizzes) if (!only || q.id === only) out[q.id] = await ranking.top(q.id, limit);
+    // Cada ativacao so enxerga o ranking dos proprios quizzes.
+    const pool = act ? ((c.activations.find((a) => a.id === act) || { quizzes: [] }).quizzes) : content.allQuizzes(c);
+    for (const q of pool) if (!only || q.id === only) out[q.id] = await ranking.top(q.id, limit);
     sendJson(res, 200, { ranking: out });
+    return true;
+  }
+  if (rel === '/api/activation' && req.method === 'GET') {
+    const c = JSON.parse(await publicContent());
+    const a = c.activations.find((x) => x.id === url.searchParams.get('id'));
+    if (!a) { sendJson(res, 404, { error: 'ativacao nao encontrada' }); return true; }
+    sendJson(res, 200, { id: a.id, title: a.title, idleSeconds: c.idleSeconds, quizzes: a.quizzes }, { 'Cache-Control': 'no-cache, must-revalidate' });
     return true;
   }
   if (rel === '/api/score' && req.method === 'POST') {
     if (limited(clientIp(req), 'score', 30, 600000)) { sendJson(res, 429, { error: 'Muitas pontuacoes enviadas.' }); return true; }
     const b = await readJson(req, 2048);
-    const content = JSON.parse(await publicContent());
-    const quiz = content.quizzes.find((q) => q.id === b.quizId);
+    const quiz = content.allQuizzes(JSON.parse(await publicContent())).find((q) => q.id === b.quizId);
     const name = ranking.cleanName(b.name);
     const n = quiz ? quiz.questions.length : 0;
     const ok = quiz && name && [b.points, b.correct, b.total, b.ms].every(Number.isInteger)
@@ -176,7 +206,7 @@ function serveStatic(req, res, rel) {
       // Código e conteúdo sempre revalidados (senão o aparelho segura versão antiga); só mídia fica em cache.
       'Cache-Control': ['.json', '.html', '.css', '.js'].includes(ext) ? 'no-cache, must-revalidate' : 'public, max-age=3600',
     };
-    if (rel.indexOf('/admin') === 0) headers['X-Robots-Tag'] = 'noindex';
+    if (rel.indexOf('/admin') === 0 || rel.indexOf('/menu') === 0) headers['X-Robots-Tag'] = 'noindex';
     const range = req.headers.range && /bytes=(\d*)-(\d*)/.exec(req.headers.range);
     if (range) {
       let start = range[1] ? parseInt(range[1], 10) : 0;
@@ -206,6 +236,19 @@ http.createServer(async (req, res) => {
       if (base && !/^https?:\/\//i.test(base)) base = 'https://' + base;
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
       return res.end('window.APP_CONFIG = ' + JSON.stringify({ mediaBase: base }) + ';');
+    }
+    if (rel === '/') return serveStatic(req, res, '/menu.html');                       // menu principal (pede a senha)
+    if (content.IDS.some((id) => rel === '/' + id || rel === '/' + id + '/')) return serveStatic(req, res, '/index.html');   // /peixes, /aves, /projeta
+    const mm = /^\/manifest\/([a-z0-9-]+)\.webmanifest$/.exec(rel);
+    if (mm && content.IDS.includes(mm[1])) {
+      // Ao instalar/adicionar a tela inicial, o app abre direto na propria ativacao (nunca no menu principal).
+      const a = JSON.parse(await publicContent()).activations.find((x) => x.id === mm[1]);
+      res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'no-cache' });
+      return res.end(JSON.stringify({
+        name: 'Terra da Gente - ' + a.title, short_name: a.title.replace(/^Ativação\s+/i, ''), start_url: '/' + a.id, scope: '/' + a.id,
+        display: 'fullscreen', orientation: 'any', background_color: '#06130b', theme_color: '#06130b', lang: 'pt-BR',
+        icons: [{ src: '/img/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: '/img/icon-512.png', sizes: '512x512', type: 'image/png' }],
+      }));
     }
     if (rel === '/data/quiz.json') {
       const body = await publicContent();
