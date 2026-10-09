@@ -5,7 +5,7 @@
   var ACTS = [
     { id: 'peixes', title: 'Ativação Peixes São Carlos' },
     { id: 'aves', title: 'Ativação Aves São Carlos' },
-    { id: 'projeta', title: 'Ativação Projeta 2026' }
+    { id: 'projeta', title: 'Ativação Projeta 2027' }
   ];
 
   function el(tag, attrs, kids) {

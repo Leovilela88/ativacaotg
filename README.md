@@ -19,7 +19,7 @@ Conecte o repositório no Railway; ele detecta Node e executa `npm start`. Healt
 | `/` | **Menu principal** (pede a senha do admin): abre cada ativação e copia os links |
 | `/peixes` | Ativação Peixes São Carlos |
 | `/aves` | Ativação Aves São Carlos |
-| `/projeta` | Ativação Projeta 2026 |
+| `/projeta` | Ativação Projeta 2027 |
 | `/admin` | Painel: abas por ativação (Perguntas e Ranking) e Mídias |
 
 Os links das TVs e telas são os de cada ativação. Dentro delas, os botões de voltar levam só ao início da própria
