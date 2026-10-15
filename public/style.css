@@ -288,3 +288,7 @@ html.lite .opts button.wrong { background: rgba(255, 107, 87, .22); border-color
 html .helps button.lit, html .sound button.lit, html button.ghost.lit, html button.tab.lit,
 html.lite .helps button.lit, html.lite .sound button.lit, html.lite button.ghost.lit, html.lite button.tab.lit {
   background: linear-gradient(135deg, var(--lime), var(--lime-2)); color: var(--ink); border-style: solid; border-color: transparent; box-shadow: 0 0 0 .5vmin rgba(198, 244, 50, .35); }
+
+/* Projeta (tablet): mesmo visual das TVs, mas com o fundo PARADO. O zoom lento do fundo obrigava o aparelho a refazer o
+   desfoque de vidro de todos os paineis a cada quadro, e isso pesava no toque. Visualmente quase nao se nota. */
+html.calm #bg { top: 0; left: 0; right: 0; bottom: 0; animation: none; will-change: auto; }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<script>(function(){var s=location.pathname.split('/')[1],q=location.search;if(/[?&]lite=1/.test(q)||(s==='projeta'&&!/[?&]lite=0/.test(q)))document.documentElement.className+=' lite';})();</script>
+<script>(function(){var s=location.pathname.split('/')[1],q=location.search,h=document.documentElement;if(/[?&]lite=1/.test(q))h.className+=' lite';if(s==='projeta'&&!/[?&]calm=0/.test(q))h.className+=' calm';})();</script>
 <title>Terra da Gente</title>
 <link rel="manifest" href="manifest.webmanifest">
 <script>(function(){var m=/^\/([a-z0-9-]+)/.exec(location.pathname);var l=document.querySelector('link[rel=manifest]');if(m&&l)l.href='/manifest/'+m[1]+'.webmanifest';})();</script>
