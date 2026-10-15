@@ -168,7 +168,7 @@
     quiz = q;
     var name = player || '';
     var disp = el('div', { class: 'namebox' });
-    var startB = el('button', { class: 'go', text: 'Começar' });
+    var startB = el('button', { class: 'go', text: 'Continuar' });
     function paint() {
       disp.innerHTML = '';
       disp.appendChild(name ? el('span', { text: name }) : el('span', { class: 'ph', text: 'Digite seu nome' }));
@@ -187,7 +187,7 @@
       el('button', { class: 'key space', text: 'Espaço', onclick: function () { add(' '); } }),
       startB
     ]);
-    startB.addEventListener('click', function () { if (!startB.disabled) { player = name.replace(/\s+/g, ' ').trim(); startGame(); } });
+    startB.addEventListener('click', function () { if (!startB.disabled) { player = name.replace(/\s+/g, ' ').trim(); rulesScreen(); } });
     render([
       el('div', { class: 'top' }, [el('img', { class: 'mini', src: 'img/logo.png', alt: '' }), el('div', { class: 'progress' }, [el('span', { text: q.title })])]),
       el('p', { class: 'eyebrow', text: 'Quem vai jogar?' }), disp, el('div', { class: 'kb' }, rows.concat([tools]))
@@ -200,6 +200,27 @@
       if (c.length === 1 && /[A-Za-zÀ-ÿ0-9]/.test(c)) { add(c.toUpperCase()); e.preventDefault(); return true; }
       return false;
     };
+  }
+
+  // Regras curtas antes da partida: so as linhas que valem para este quiz (canto, pontos por velocidade, eliminar).
+  function rulesScreen() {
+    var hasSound = quiz.questions.some(function (p) { return p.sound; });
+    var l = quiz.lifelines || {}, chances = l.fifty == null ? 3 : l.fifty;
+    var rows = [];
+    if (hasSound) rows.push(['Ouça o canto', 'Ele toca no início da pergunta e é a dica para chegar à resposta.']);
+    rows.push(['Seja rápido', 'Quanto mais rápido você responde, mais pontos ganha: até 100 por pergunta.']);
+    if (chances > 0) rows.push(['Eliminar alternativas', 'Você tem ' + chances + (chances === 1 ? ' chance' : ' chances') + ' de sortear e tirar de 1 a 3 alternativas erradas.']);
+    render([
+      top(false),
+      el('p', { class: 'eyebrow', text: 'Como jogar' }),
+      el('div', { class: 'rules' }, rows.map(function (r, i) {
+        return el('div', { class: 'rule-row' }, [
+          el('span', { class: 'rnum', text: String(i + 1) }),
+          el('div', { class: 'rtxt' }, [el('b', { text: r[0] }), el('span', { text: r[1] })])
+        ]);
+      })),
+      el('div', { class: 'actions' }, [el('button', { text: 'Iniciar', onclick: startGame })])
+    ], 0);
   }
 
   function startGame() {

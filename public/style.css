@@ -292,3 +292,12 @@ html.lite .helps button.lit, html.lite .sound button.lit, html.lite button.ghost
 /* Projeta (tablet): mesmo visual das TVs, mas com o fundo PARADO. O zoom lento do fundo obrigava o aparelho a refazer o
    desfoque de vidro de todos os paineis a cada quadro, e isso pesava no toque. Visualmente quase nao se nota. */
 html.calm #bg { top: 0; left: 0; right: 0; bottom: 0; animation: none; will-change: auto; }
+
+/* tela de regras (antes da partida) */
+.rules { width: min(90vw, 104vmin); margin-bottom: 3.4vmin; }
+.rule-row { display: flex; align-items: center; margin-bottom: 1.8vmin; padding: 2.2vmin 3vmin; text-align: left; border-radius: 2.4vmin;
+  background: rgba(4, 20, 11, .52); -webkit-backdrop-filter: blur(1.6vmin); backdrop-filter: blur(1.6vmin); border: .2vmin solid var(--line); }
+.rnum { flex: 0 0 auto; width: 6.2vmin; height: 6.2vmin; margin-right: 2.8vmin; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 3vmin; font-weight: 700; color: var(--ink); background: linear-gradient(135deg, var(--lime), var(--lime-2)); }
+.rtxt b { display: block; font-size: 2.9vmin; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--lime); }
+.rtxt span { display: block; margin-top: .6vmin; font-size: 2.7vmin; line-height: 1.3; opacity: .92; }
