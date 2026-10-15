@@ -5,7 +5,7 @@
   --font: Futura, "Futura PT", "Jost", "Century Gothic", "Avenir Next", Arial, sans-serif;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; overflow: hidden; background: #06130b; color: #fff; font-family: var(--font); }
+html, body { touch-action: pan-x pan-y; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; margin: 0; height: 100%; overflow: hidden; background: #06130b; color: #fff; font-family: var(--font); }
 
 /* fundo: foto com zoom lento + camada de sombra */
 #bg { position: fixed; top: -4%; left: -4%; right: -4%; bottom: -4%; z-index: 0;
@@ -91,11 +91,11 @@ button:focus .badge, button:active .badge { background: var(--ink); color: var(-
 .helps { display: flex; justify-content: center; margin-top: 1.2vmin; }
 .sound { display: flex; align-items: center; justify-content: center; margin-top: 2.4vmin; }
 .eq { display: flex; align-items: center; height: 8vmin; margin-right: 3.4vmin; }
-.eq i { display: block; width: 1.1vmin; height: 22%; margin: 0 .45vmin; border-radius: 1vmin; background: var(--lime); opacity: .45; }
+.eq i { display: block; width: 1.1vmin; height: 100%; transform: scaleY(.22); margin: 0 .45vmin; border-radius: 1vmin; background: var(--lime); opacity: .45; }
 .eq.on i { opacity: 1; animation: eq .9s ease-in-out infinite; }
 .eq i:nth-child(2) { animation-delay: .12s; } .eq i:nth-child(3) { animation-delay: .26s; } .eq i:nth-child(4) { animation-delay: .08s; }
 .eq i:nth-child(5) { animation-delay: .32s; } .eq i:nth-child(6) { animation-delay: .18s; } .eq i:nth-child(7) { animation-delay: .4s; }
-@keyframes eq { 0%, 100% { height: 22%; } 50% { height: 100%; } }
+@keyframes eq { 0%, 100% { transform: scaleY(.22); } 50% { transform: scaleY(1); } }
 button[hidden] { display: none !important; }
 .actions button:disabled { opacity: .5; }
 .sound button { padding: 1.4vmin 3vmin; font-size: 2.2vmin; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; justify-content: center; background: rgba(255, 255, 255, .06); border-style: dashed; }
@@ -154,7 +154,7 @@ h1 { margin: 0 0 1.6vmin; font-size: 5.4vmin; font-weight: 600; letter-spacing: 
 .chip { margin-left: 2.4vmin; padding: .7vmin 1.8vmin; border-radius: 2vmin; background: rgba(198, 244, 50, .16); border: .2vmin solid rgba(198, 244, 50, .55); color: var(--lime); font-weight: 600; letter-spacing: .08em; }
 .clock { display: flex; align-items: center; justify-content: center; margin-bottom: 1.6vmin; }
 .cbar { width: min(60vw, 70vmin); height: 1.1vmin; border-radius: 1vmin; background: rgba(255, 255, 255, .16); overflow: hidden; }
-.cbar i { display: block; height: 100%; width: 100%; border-radius: 1vmin; background: linear-gradient(90deg, var(--lime-2), var(--lime)); }
+.cbar i { display: block; height: 100%; width: 100%; transform-origin: left center; will-change: transform; border-radius: 1vmin; background: linear-gradient(90deg, var(--lime-2), var(--lime)); }
 .clock b { min-width: 9vmin; margin-left: 2vmin; font-size: 3.8vmin; font-weight: 600; text-align: left; font-variant-numeric: tabular-nums; }
 .clock.low .cbar i { background: var(--bad); } .clock.low b { color: var(--bad); animation: pulse .8s ease-in-out infinite; }
 .pts { margin: 0 0 3vmin; font-size: 5.6vmin; font-weight: 700; color: var(--lime); letter-spacing: .02em; animation: pop .5s cubic-bezier(.2, 1.4, .4, 1) both; }
@@ -239,3 +239,17 @@ button.ghost { padding: 1.8vmin 4vmin; justify-content: center; font-size: 2.3vm
 button:focus .pic, button:active .pic { border-color: var(--ink); }
 .opts button.gone .pic { filter: grayscale(1); }
 .revimg { display: block; width: 14vmin; height: 14vmin; margin: 1.4vmin auto 0; object-fit: cover; border-radius: 2vmin; border: .25vmin solid rgba(255, 255, 255, .35); }
+
+/* ---------- MODO LEVE (tablet): sem efeitos caros, para o toque ficar fluido ----------
+   Ligado automaticamente em /projeta (ou com ?lite=1; ?lite=0 desliga). TVs seguem com o visual completo. */
+html.lite #bg { top: 0; left: 0; right: 0; bottom: 0; background-image: url(img/fundo-lite.jpg); animation: none; will-change: auto; }
+html.lite #app { animation: none; }
+html.lite .panel, html.lite button, html.lite .brow, html.lite .draw { -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: none; }
+html.lite .panel { background: rgba(4, 20, 11, .8); }
+html.lite button { background: rgba(8, 36, 19, .86); transition: none; }
+html.lite .opts button, html.lite .tick, html.lite .pts { animation: none; }
+html.lite .logo, html.lite .ring .bar, html.lite .tick, html.lite .drum { filter: none; box-shadow: none; }
+/* toque: so o dedo apertado destaca (sem foco "grudado" nem aumento de tamanho) */
+html.lite button:focus { transform: none; box-shadow: none; }
+html.lite button:active { transform: none; box-shadow: none; color: var(--ink); border-color: transparent; background: linear-gradient(135deg, var(--lime), var(--lime-2)); }
+html.lite .eq.on i { animation-duration: 1.2s; }

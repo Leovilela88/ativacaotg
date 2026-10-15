@@ -62,7 +62,29 @@
     var s = data && data.idleSeconds;
     if (s) idleTimer = setTimeout(function () { if (quiz) home(); }, s * 1000);
   }
-  ['keydown', 'click', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, bumpIdle, true); });
+  // Listeners "passivos": nunca seguram o toque/rolagem (era uma fonte de travadinhas em tablet).
+  var passiveOpt = true;
+  try { var po = Object.defineProperty({}, 'passive', { get: function () { passiveOpt = { passive: true, capture: true }; return true; } }); window.addEventListener('t', null, po); } catch (e) {}
+  ['keydown', 'click', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, bumpIdle, passiveOpt); });
+
+  // Tablet: mantem a tela acesa durante o jogo, bloqueia zoom por pinca e tira o foco "grudado" dos botoes apos o toque.
+  var LITE = /(^|\s)lite(\s|$)/.test(document.documentElement.className);
+  var wakeLock = null;
+  function keepAwake() {
+    try {
+      if (navigator.wakeLock && !wakeLock && document.visibilityState === 'visible') {
+        navigator.wakeLock.request('screen').then(function (s) { wakeLock = s; s.addEventListener('release', function () { wakeLock = null; }); }, function () {});
+      }
+    } catch (e) {}
+  }
+  ['click', 'touchend', 'keydown'].forEach(function (ev) { document.addEventListener(ev, keepAwake, passiveOpt); });
+  document.addEventListener('visibilitychange', keepAwake);
+  ['gesturestart', 'gesturechange'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
+  if (LITE) {
+    document.addEventListener('click', function () {
+      setTimeout(function () { var a = document.activeElement; if (a && a !== document.body && a.blur && a.tagName === 'BUTTON') a.blur(); }, 0);
+    }, true);
+  }
 
   // ---------- pontuação ----------
   // 10 a 100 pontos conforme o tempo que sobrou. Errou ou acabou o tempo: 0.
@@ -227,12 +249,15 @@
       if (started) return;
       started = true; hint.className = 'hint';
       t0 = Date.now();
+      var lastSecs = secs.textContent, wasLow = false;
       tick = setInterval(function () {
         if (paused || done) return;
         var left = Math.max(0, limit - (Date.now() - t0)), r = left / limit;
-        bar.style.width = (r * 100) + '%';
-        secs.textContent = String(Math.ceil(left / 1000));
-        clock.className = 'clock' + (r < 0.25 ? ' low' : '');
+        bar.style.transform = 'scaleX(' + r + ')';          // escala (barato) em vez de mexer na largura
+        var s = String(Math.ceil(left / 1000));
+        if (s !== lastSecs) { secs.textContent = s; lastSecs = s; }
+        var low = r < 0.25;
+        if (low !== wasLow) { clock.className = 'clock' + (low ? ' low' : ''); wasLow = low; }
         if (left <= 0) { done = true; clearInterval(tick); spent += limit; miss(q, 'time'); }
       }, 100);
     }
@@ -369,6 +394,7 @@
       media.addEventListener('error', function () { row.className = 'rwd solo'; if (wrap.parentNode) wrap.parentNode.removeChild(wrap); });
       render([top(true), row]);
       gate();
+      if (r.type === 'video') { var vp = media.play && media.play(); if (vp && vp.catch) vp.catch(function () {}); }   // dentro do toque do jogador; se bloquear, ele usa o play
       return;
     }
     if (media) media.addEventListener('error', function () { if (media.parentNode) media.parentNode.removeChild(media); });
