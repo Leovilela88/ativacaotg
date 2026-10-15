@@ -8,12 +8,14 @@
   if (/\./.test(seg)) seg = '';   // ex.: /index.html nao e uma ativacao
   var ACT = (seg || (/[?&]a=([a-z0-9-]+)/.exec(location.search) || [])[1] || '').toLowerCase();
   var actTitle = '';
+  var PROXY = ACT === 'projeta' && !/[?&]proxy=0/.test(location.search);
   var player = '', idleTimer = null, tick = null, onKey = null, screenToken = 0;
 
   // ---------- helpers ----------
   // Midias: se MEDIA_BASE_URL (bucket R2) estiver definida, "video1.mp4" vira "<bucket>/video1.mp4".
   function mediaUrl(src) {
     if (!src || /^(https?:)?\/\//i.test(src) || src.charAt(0) === '/') return src;
+    if (PROXY) return '/m/' + encodeURI(src.replace(/^media\//, ''));   // Projeta: pela ponte do servidor (guardavel offline, sem CORS)
     var base = (window.APP_CONFIG && window.APP_CONFIG.mediaBase) || '';
     if (!base) return src.indexOf('/') < 0 ? 'media/' + src : src;
     return base + '/' + src.replace(/^media\//, '');

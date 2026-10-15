@@ -192,6 +192,24 @@ async function api(req, res, rel, url) {
   return sendJson(res, 404, { error: 'rota inexistente' });
 }
 
+// Ponte de midias: /m/<arquivo> le do bucket e repassa (com Range, que o <video> exige).
+// Serve para o app guardar as midias no aparelho (offline) sem depender de CORS no Cloudflare.
+async function serveMedia(req, res, key) {
+  if (!store.status().ok || key.indexOf('..') >= 0 || key.indexOf('_data/') === 0 || !store.contentTypeOf(key)) { res.writeHead(404); return res.end(); }
+  const range = /^bytes=\d*-\d*$/.test(req.headers.range || '') ? req.headers.range : undefined;
+  let out;
+  try { out = await store.getObject(key, range); }
+  catch (e) { if (store.isNotFound(e)) { res.writeHead(404); return res.end(); } throw e; }
+  const h = { 'Content-Type': out.ContentType || store.contentTypeOf(key), 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=31536000, immutable' };
+  if (out.ContentLength != null) h['Content-Length'] = out.ContentLength;
+  if (out.ContentRange) h['Content-Range'] = out.ContentRange;
+  res.writeHead(out.ContentRange ? 206 : 200, h);
+  const body = out.Body;
+  if (req.method === 'HEAD') { try { body.destroy(); } catch (e) {} return res.end(); }
+  res.on('close', () => { try { body.destroy(); } catch (e) {} });   // jogador fechou/avancou: para de baixar
+  body.pipe(res);
+}
+
 function serveStatic(req, res, rel, extraHeaders) {
   if (rel.endsWith('/')) rel += 'index.html';
   if (rel === '/admin') rel = '/admin.html';
@@ -239,6 +257,7 @@ http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
       return res.end('window.APP_CONFIG = ' + JSON.stringify({ mediaBase: base }) + ';');
     }
+    if (rel.indexOf('/m/') === 0 && (req.method === 'GET' || req.method === 'HEAD')) return await serveMedia(req, res, rel.slice(3));
     if (rel === '/projeta/sw.js') return serveStatic(req, res, '/sw.js', { 'Service-Worker-Allowed': '/projeta' });   // service worker so da Projeta
     if (rel === '/') return serveStatic(req, res, '/menu.html');                       // menu principal (pede a senha)
     if (content.IDS.some((id) => rel === '/' + id || rel === '/' + id + '/')) return serveStatic(req, res, '/index.html');   // /peixes, /aves, /projeta
