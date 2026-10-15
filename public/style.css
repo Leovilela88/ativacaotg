@@ -253,3 +253,10 @@ html.lite .logo, html.lite .ring .bar, html.lite .tick, html.lite .drum { filter
 html.lite button:focus { transform: none; box-shadow: none; }
 html.lite button:active { transform: none; box-shadow: none; color: var(--ink); border-color: transparent; background: linear-gradient(135deg, var(--lime), var(--lime-2)); }
 html.lite .eq.on i { animation-duration: 1.2s; }
+
+/* aviso discreto do download para uso offline (so na Projeta) */
+#off { position: fixed; top: 1.8vmin; left: 50%; transform: translateX(-50%); z-index: 9; padding: .9vmin 2.2vmin; border-radius: 2vmin; font-size: 1.9vmin; font-weight: 500; letter-spacing: .06em;
+  background: rgba(4, 20, 11, .85); border: .2vmin solid var(--line); opacity: 0; pointer-events: none; transition: opacity .3s; white-space: nowrap; }
+#off.show { opacity: 1; }
+#off.ok { border-color: var(--ok); color: var(--ok); }
+#off.bad { border-color: var(--bad); color: var(--bad); }

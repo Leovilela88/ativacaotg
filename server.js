@@ -192,7 +192,7 @@ async function api(req, res, rel, url) {
   return sendJson(res, 404, { error: 'rota inexistente' });
 }
 
-function serveStatic(req, res, rel) {
+function serveStatic(req, res, rel, extraHeaders) {
   if (rel.endsWith('/')) rel += 'index.html';
   if (rel === '/admin') rel = '/admin.html';
   const file = path.normalize(path.join(ROOT, rel));
@@ -208,6 +208,7 @@ function serveStatic(req, res, rel) {
       'Cache-Control': ['.json', '.html', '.css', '.js'].includes(ext) ? 'no-cache, must-revalidate' : 'public, max-age=3600',
     };
     if (rel.indexOf('/admin') === 0 || rel.indexOf('/menu') === 0) headers['X-Robots-Tag'] = 'noindex';
+    Object.assign(headers, extraHeaders || {});
     const range = req.headers.range && /bytes=(\d*)-(\d*)/.exec(req.headers.range);
     if (range) {
       let start = range[1] ? parseInt(range[1], 10) : 0;
@@ -238,6 +239,7 @@ http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-cache, must-revalidate' });
       return res.end('window.APP_CONFIG = ' + JSON.stringify({ mediaBase: base }) + ';');
     }
+    if (rel === '/projeta/sw.js') return serveStatic(req, res, '/sw.js', { 'Service-Worker-Allowed': '/projeta' });   // service worker so da Projeta
     if (rel === '/') return serveStatic(req, res, '/menu.html');                       // menu principal (pede a senha)
     if (content.IDS.some((id) => rel === '/' + id || rel === '/' + id + '/')) return serveStatic(req, res, '/index.html');   // /peixes, /aves, /projeta
     const mm = /^\/manifest\/([a-z0-9-]+)\.webmanifest$/.exec(rel);

@@ -421,7 +421,8 @@
     setTimeout(function () { var b = ring.querySelector('.bar'); if (b) b.style.strokeDashoffset = String(326.7 * (1 - ratio)); }, 120);
     ajax('POST', 'api/score', { quizId: thisQuiz.id, name: player, points: pts, correct: correct, total: total, ms: Math.round(spent) }, function (r) {
       if (!rankLine.parentNode) return;
-      if (r) { myId = r.id; rankLine.textContent = r.rank ? 'Você está em ' + r.rank + 'º lugar entre ' + r.players + ' jogador' + (r.players > 1 ? 'es' : '') : 'Pontuação registrada.'; rankBtn.disabled = false; }
+      if (r && r.queued) { rankLine.textContent = 'Sem internet: sua pontuação foi guardada e será enviada depois.'; }
+      else if (r) { myId = r.id; rankLine.textContent = r.rank ? 'Você está em ' + r.rank + 'º lugar entre ' + r.players + ' jogador' + (r.players > 1 ? 'es' : '') : 'Pontuação registrada.'; rankBtn.disabled = false; }
       else { rankLine.textContent = 'Não foi possível salvar no ranking agora.'; }
     });
   }
@@ -430,6 +431,7 @@
     var id = quizId || (data.quizzes[0] && data.quizzes[0].id) || '';
     render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), el('p', { class: 'sub', text: 'Carregando...' })]);
     ajax('GET', 'api/ranking?activation=' + encodeURIComponent(ACT) + '&limit=100&_=' + Date.now(), null, function (r) {
+      if (!r) { render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), el('p', { class: 'sub', text: 'Ranking indisponível sem internet.' }), el('div', { class: 'actions' }, [el('button', { text: 'Voltar', onclick: home })])]); return; }
       var all = (r && r.ranking) || {};
       var tabs = el('div', { class: 'tabs' }, data.quizzes.length < 2 ? [] : data.quizzes.map(function (q) {
         return el('button', { class: 'tab' + (q.id === id ? ' on' : ''), text: q.title, onclick: function () { rankingScreen(q.id, highlight); } });
@@ -514,6 +516,53 @@
     }
   }
 
+  // ---------- uso offline (so /projeta) ----------
+  // Guarda app, conteudo e midias no disco do tablet; pontuacoes feitas sem internet vao para uma fila.
+  // Emergencia: /projeta?sw=off desregistra tudo, apaga os dados e mantem o modo offline DESLIGADO neste tablet; /projeta?sw=on religa.
+  var offChip = document.getElementById('off'), offTimer = null;
+  function offSay(text, cls, hideAfter) {
+    if (!offChip) return;
+    clearTimeout(offTimer);
+    offChip.textContent = text; offChip.className = 'show ' + (cls || '');
+    if (hideAfter) offTimer = setTimeout(function () { offChip.className = ''; }, hideAfter);
+  }
+  function mediaList() {
+    var out = {};
+    (data.quizzes || []).forEach(function (q) { (q.questions || []).forEach(function (p) {
+      if (p.reward && p.reward.src && p.reward.type !== 'text') out[mediaUrl(p.reward.src)] = 1;
+      if (p.sound) out[mediaUrl(p.sound)] = 1;
+      (p.images || []).forEach(function (k) { if (k) out[mediaUrl(k)] = 1; });
+    }); });
+    return Object.keys(out).map(function (u) { return new URL(u, location.href).href; });
+  }
+  function offlineSetup() {
+    if (ACT !== 'projeta' || !('serviceWorker' in navigator)) return;
+    if (/[?&]sw=on/.test(location.search)) { try { localStorage.removeItem('swoff'); } catch (e) {} location.replace(location.pathname); return; }
+    var swOff = false; try { swOff = localStorage.getItem('swoff') === '1'; } catch (e) {}
+    if (/[?&]sw=off/.test(location.search)) {
+      try { localStorage.setItem('swoff', '1'); } catch (e) {}     // fica desligado neste tablet ate abrir ?sw=on
+      navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+        .then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : null; })
+        .then(function () { location.replace(location.pathname); });
+      return;
+    }
+    if (swOff) return;
+    navigator.serviceWorker.addEventListener('message', function (e) {
+      var m = e.data || {};
+      if (m.type === 'progress') offSay('Baixando para uso offline ' + (m.done + m.failed) + '/' + m.total, '');
+      else if (m.type === 'done') {
+        if (m.failed) offSay('Atenção: ' + m.failed + ' de ' + m.total + ' arquivo(s) não ficaram salvos para uso offline', 'bad');
+        else offSay(m.total ? 'Pronto para uso offline' : '', 'ok', 5000);
+      }
+    });
+    navigator.serviceWorker.register('/projeta/sw.js', { scope: '/projeta' }).then(function () { return navigator.serviceWorker.ready; }).then(function (reg) {
+      try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}   // pede para o navegador nao apagar
+      var urls = mediaList();
+      if (reg.active) { reg.active.postMessage({ type: 'precache', urls: urls }); reg.active.postMessage({ type: 'flush' }); }
+      window.addEventListener('online', function () { if (reg.active) reg.active.postMessage({ type: 'flush' }); });
+    }).catch(function () {});
+  }
+
   // ---------- boot ----------
   // Atalho escondido: segurar ~1,8 s o canto inferior direito leva ao menu principal (que ainda pede a senha).
   (function () {
@@ -531,6 +580,6 @@
     if (!j) { app.textContent = 'Ativação não encontrada ou sem conexão.'; return; }
     data = { idleSeconds: j.idleSeconds, quizzes: j.quizzes || [] }; actTitle = j.title || '';
     if (actTitle) document.title = actTitle + ' - Terra da Gente';
-    home(); bumpIdle();
+    home(); bumpIdle(); offlineSetup();
   });
 })();
