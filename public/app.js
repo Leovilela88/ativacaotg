@@ -88,6 +88,31 @@
   ['click', 'touchend', 'keydown'].forEach(function (ev) { document.addEventListener(ev, keepAwake, passiveOpt); });
   document.addEventListener('visibilitychange', keepAwake);
   ['gesturestart', 'gesturechange'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
+  // Toque (tablet): o botao ACENDE no toque e a acao roda ~160 ms depois, para o olho ver o feedback.
+  // Teclado de nomes e botoes do rodape ficam sem atraso. A pontuacao usa o instante da acao (igual para todos).
+  var TAP = LITE || /[?&]tap=1/.test(location.search);
+  if (TAP) {
+    var unlit = function (b) { if (b && !b.__pending) b.classList.remove('lit'); };
+    document.addEventListener('touchstart', function (e) {
+      var b = e.target.closest && e.target.closest('button');
+      if (!b || b.disabled) return;
+      b.classList.add('lit'); clearTimeout(b.__lt); b.__lt = setTimeout(function () { unlit(b); }, 700);
+    }, passiveOpt);
+    document.addEventListener('touchend', function (e) { var b = e.target.closest && e.target.closest('button'); if (b) setTimeout(function () { unlit(b); }, 150); }, passiveOpt);
+    document.addEventListener('touchmove', function (e) { var b = e.target.closest && e.target.closest('button'); unlit(b); }, passiveOpt);
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('button') : null;
+      if (!b || b.disabled || b.closest('#tools') || b.classList.contains('key')) return;
+      if (b.__replay) { b.__replay = false; return; }                 // clique reenviado depois do brilho
+      e.stopImmediatePropagation(); e.preventDefault();
+      if (b.__pending) return;                                         // toque repetido enquanto acende
+      b.__pending = true; b.classList.add('lit');
+      setTimeout(function () {
+        b.__pending = false; b.classList.remove('lit');
+        if (b.isConnected && !b.disabled) { b.__replay = true; b.click(); b.__replay = false; }
+      }, 160);
+    }, true);
+  }
   if (LITE) {
     document.addEventListener('click', function () {
       setTimeout(function () { var a = document.activeElement; if (a && a !== document.body && a.blur && a.tagName === 'BUTTON') a.blur(); }, 0);

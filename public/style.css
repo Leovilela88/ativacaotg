@@ -271,3 +271,20 @@ html.lite .eq.on i { animation-duration: 1.2s; }
 #tools button.armed { color: var(--lime); border-color: var(--lime); }
 #t-dot { display: block; width: .8vmin; height: .8vmin; min-width: 4px; min-height: 4px; border-radius: 50%; background: rgba(255, 255, 255, .18); }
 #t-dot.on { background: var(--ok); box-shadow: 0 0 .8vmin rgba(75, 224, 138, .7); }
+
+/* ---------- toque: o botao "acende" (classe .lit: no toque e mantida ~160 ms antes da acao) ---------- */
+html button.lit, html.lite button.lit { transform: none; color: var(--ink); border-color: transparent; background: linear-gradient(135deg, var(--lime), var(--lime-2)); box-shadow: 0 0 0 .5vmin rgba(198, 244, 50, .35); }
+button.lit .badge { background: var(--ink); color: var(--lime); border-color: var(--ink); }
+.cards button.lit .num { color: var(--ink); }
+button.lit .count { background: var(--ink); color: var(--lime); }
+button.lit .pic { border-color: var(--ink); }
+.krow .go.lit { filter: brightness(1.12); }
+/* modo leve (tablet): botao parado mais "cheio" e com borda visivel (antes parecia so um contorno) */
+html.lite button { background: rgba(18, 62, 36, .92); border-color: rgba(255, 255, 255, .3); box-shadow: inset 0 .2vmin 0 rgba(255, 255, 255, .16); }
+html.lite .helps button, html.lite .sound button, html.lite button.ghost { background: rgba(255, 255, 255, .07); box-shadow: none; }
+html.lite .opts button.wrong { background: rgba(255, 107, 87, .22); border-color: rgba(255, 107, 87, .6); }
+
+/* garante o destaque nos botoes com estilo proprio (Eliminar, Ouvir, Ver ranking, abas do ranking) */
+html .helps button.lit, html .sound button.lit, html button.ghost.lit, html button.tab.lit,
+html.lite .helps button.lit, html.lite .sound button.lit, html.lite button.ghost.lit, html.lite button.tab.lit {
+  background: linear-gradient(135deg, var(--lime), var(--lime-2)); color: var(--ink); border-style: solid; border-color: transparent; box-shadow: 0 0 0 .5vmin rgba(198, 244, 50, .35); }
