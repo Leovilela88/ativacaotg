@@ -260,3 +260,14 @@ html.lite .eq.on i { animation-duration: 1.2s; }
 #off.show { opacity: 1; }
 #off.ok { border-color: var(--ok); color: var(--ok); }
 #off.bad { border-color: var(--bad); color: var(--bad); }
+
+/* controles discretos do modo instalado (tablet): Inicio / Sair, com confirmacao no segundo toque */
+#tools { position: fixed; left: 1.4vmin; bottom: 1.2vmin; z-index: 9; display: flex; align-items: center; }
+#tools[hidden] { display: none; }
+#tools button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; margin: 0 1vmin 0 0; padding: .9vmin 1.8vmin; font-size: 1.5vmin; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .42); background: transparent; border: .15vmin solid rgba(255, 255, 255, .16); border-radius: 1.2vmin;
+  box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; transition: none; }
+#tools button:focus, #tools button:active, html.lite #tools button:active { transform: none; box-shadow: none; color: #fff; background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .45); }
+#tools button.armed { color: var(--lime); border-color: var(--lime); }
+#t-dot { display: block; width: .8vmin; height: .8vmin; min-width: 4px; min-height: 4px; border-radius: 50%; background: rgba(255, 255, 255, .18); }
+#t-dot.on { background: var(--ok); box-shadow: 0 0 .8vmin rgba(75, 224, 138, .7); }

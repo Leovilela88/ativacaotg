@@ -71,14 +71,20 @@
 
   // Tablet: mantem a tela acesa durante o jogo, bloqueia zoom por pinca e tira o foco "grudado" dos botoes apos o toque.
   var LITE = /(^|\s)lite(\s|$)/.test(document.documentElement.className);
-  var wakeLock = null;
+  var wakeLock = null, wakePending = false;
+  function paintDot() { var d = document.getElementById('t-dot'); if (d) d.className = wakeLock ? 'on' : ''; }
   function keepAwake() {
     try {
-      if (navigator.wakeLock && !wakeLock && document.visibilityState === 'visible') {
-        navigator.wakeLock.request('screen').then(function (s) { wakeLock = s; s.addEventListener('release', function () { wakeLock = null; }); }, function () {});
+      if (navigator.wakeLock && !wakeLock && !wakePending && document.visibilityState === 'visible') {
+        wakePending = true;
+        navigator.wakeLock.request('screen').then(function (s) {
+          wakePending = false; wakeLock = s; paintDot();
+          s.addEventListener('release', function () { wakeLock = null; paintDot(); setTimeout(keepAwake, 1000); });   // o sistema derrubou: pede de novo
+        }, function () { wakePending = false; });
       }
-    } catch (e) {}
+    } catch (e) { wakePending = false; }
   }
+  keepAwake(); setInterval(keepAwake, 20000);       // tenta ao abrir e reforca a cada 20 s (alguns navegadores so liberam apos um toque)
   ['click', 'touchend', 'keydown'].forEach(function (ev) { document.addEventListener(ev, keepAwake, passiveOpt); });
   document.addEventListener('visibilitychange', keepAwake);
   ['gesturestart', 'gesturechange'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }); });
@@ -110,7 +116,7 @@
 
   // ---------- telas ----------
   function home() {
-    quiz = null; qi = 0;
+    quiz = null; qi = 0; player = '';          // tela compartilhada: o proximo jogador digita o proprio nome
     if (!data.quizzes.length) {
       render([el('img', { class: 'logo', src: 'img/logo.png', alt: 'Terra da Gente' }), el('div', { class: 'rule' }),
         el('p', { class: 'eyebrow', text: actTitle }), el('p', { class: 'sub', text: 'Conteúdo em preparação. Volte em instantes.' })], -1);
@@ -516,6 +522,28 @@
       var once = function () { document.removeEventListener('click', once, true); document.removeEventListener('keydown', once, true); document.removeEventListener('touchend', once, true); if (!isFs()) toggleFs(); };
       document.addEventListener('click', once, true); document.addEventListener('keydown', once, true); document.addEventListener('touchend', once, true);
     }
+  }
+
+  // ---------- modo instalado (tablet): Inicio / Sair discretos ----------
+  var tools = document.getElementById('tools');
+  var standalone = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: minimal-ui)').matches)) || window.navigator.standalone === true;
+  if (tools && (standalone || /[?&]tools=1/.test(location.search))) {
+    tools.hidden = false;
+    if (fsBtn) fsBtn.hidden = true;                  // instalado ja esta em tela cheia
+    var bHome = document.getElementById('t-home'), bExit = document.getElementById('t-exit');
+    // Segundo toque confirma (evita toque sem querer); volta ao normal apos 3 s.
+    var arm = function (btn, label, fn) {
+      if (btn.__armed) { btn.__armed = false; clearTimeout(btn.__t); btn.className = ''; btn.textContent = label; fn(); return; }
+      btn.__armed = true; btn.className = 'armed'; btn.textContent = 'Confirmar?';
+      btn.__t = setTimeout(function () { btn.__armed = false; btn.className = ''; btn.textContent = label; }, 3000);
+    };
+    bHome.addEventListener('click', function () { if (!quiz) { home(); return; } arm(bHome, 'Início', home); });
+    bExit.addEventListener('click', function () {
+      arm(bExit, 'Sair', function () {
+        try { window.close(); } catch (e) {}
+        setTimeout(function () { offSay('Não foi possível fechar por aqui. Use o botão Recentes do tablet.', 'bad', 6000); }, 500);   // ainda aberto: o navegador nao deixou
+      });
+    });
   }
 
   // ---------- uso offline (so /projeta) ----------
