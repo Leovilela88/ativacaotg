@@ -167,6 +167,37 @@
       h('p', { class: 'hint', text: 'A cópia começa com o ranking vazio e usa as mesmas mídias. Depois é só editar.' }));
   }
 
+  // Copia UMA pergunta (com audio, fotos das alternativas e premio) para outro quiz, de qualquer ativacao.
+  function copyQuestionBox(quiz, p, pi) {
+    var dests = [], same = null;
+    S.content.activations.forEach(function (a, ai) {
+      a.quizzes.forEach(function (q, qi) {
+        var d = { a: a, ai: ai, q: q, qi: qi };
+        if (q === quiz) same = d; else dests.push(d);
+      });
+    });
+    if (same) dests.push(same);                                 // "duplicar neste quiz" por ultimo
+    var sel = h('select', { style: 'max-width:380px', onchange: function (e) { S.copyTo = e.target.value; } },
+      dests.map(function (d) {
+        var v = d.ai + ':' + d.qi;
+        return h('option', { value: v, selected: S.copyTo === v, text: d.q === quiz ? 'Este quiz (duplicar aqui)' : actName(d.a) + ' · ' + (d.q.title || '(sem título)') });
+      }));
+    var btn = h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Copiar pergunta' });
+    btn.addEventListener('click', function () {
+      var v = sel.value.split(':'), dest = S.content.activations[parseInt(v[0], 10)] && S.content.activations[parseInt(v[0], 10)].quizzes[parseInt(v[1], 10)];
+      if (!dest) return;
+      var copy = JSON.parse(JSON.stringify(p));                  // copia independente: editar uma nao altera a outra
+      S.copyTo = sel.value;
+      if (dest === quiz) { dest.questions.splice(pi + 1, 0, copy); mark(); render(); say('Pergunta duplicada logo abaixo. Clique em Salvar alterações.', 'dirty'); return; }
+      dest.questions.push(copy);
+      mark(); say('Pergunta copiada para "' + (dest.title || 'sem título') + '" (agora com ' + dest.questions.length + '). Clique em Salvar alterações.', 'dirty');
+      btn.textContent = 'Copiada!'; setTimeout(function () { btn.textContent = 'Copiar pergunta'; }, 1800);
+    });
+    return h('div', { class: 'copyq' },
+      h('label', { class: 'lbl', text: 'Copiar esta pergunta para outro quiz' }),
+      h('div', { class: 'row' }, sel, btn));
+  }
+
   function numField(label, cur, min, max, onSet) {
     return h('label', { class: 'row', style: 'flex:1' }, h('span', { class: 'hint', style: 'white-space:nowrap', text: label }),
       h('input', { type: 'number', min: String(min), max: String(max), value: String(cur), style: 'width:90px', onchange: function (e) {
@@ -247,7 +278,8 @@
       h('div', { class: 'row' }, sel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar novo arquivo', onclick: function () { file.click(); } }), file),
       preview(r.src),
       h('label', { class: 'lbl', text: 'Legenda (opcional)' }),
-      h('input', { type: 'text', value: r.caption || '', placeholder: 'Ex.: Acertou! É o Dourado.', oninput: function (e) { r.caption = e.target.value; mark(); } }));
+      h('input', { type: 'text', value: r.caption || '', placeholder: 'Ex.: Acertou! É o Dourado.', oninput: function (e) { r.caption = e.target.value; mark(); } }),
+      copyQuestionBox(quiz, p, pi));
   }
   function alignImgs(p) {
     var a = Array.isArray(p.images) ? p.images.slice() : [];

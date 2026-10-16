@@ -72,3 +72,9 @@ a.btn { color: inherit; text-decoration: none; display: inline-flex; align-items
 .photosel { width: 130px; flex: none; }
 
 .opt.optrow { flex-wrap: wrap; }
+
+.copyq { margin-top: 18px; padding-top: 6px; border-top: 1px solid var(--line); }
+
+/* campos numericos (tempo por pergunta, eliminacoes): estilo igual aos demais; antes ficavam branco sobre branco */
+input[type=number] { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0, 0, 0, .3); color: #fff; outline: none; }
+input[type=number]:focus { border-color: var(--lime); }
