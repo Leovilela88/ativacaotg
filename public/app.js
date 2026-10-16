@@ -444,7 +444,7 @@
     // Foto/video: midia a esquerda (cabe vertical) e informacoes a direita. Audio/texto: coluna unica.
     if (media && r.type !== 'audio') {
       var wrap = el('div', { class: 'rwd-media' }, [media]);
-      var row = el('div', { class: 'rwd' }, [wrap, el('div', { class: 'rwd-info' }, info.concat([actions]))]);
+      var row = el('div', { class: 'rwd' + (r.type === 'image' ? ' photo' : '') }, [wrap, el('div', { class: 'rwd-info' }, info.concat([actions]))]);
       media.addEventListener('error', function () { row.className = 'rwd solo'; if (wrap.parentNode) wrap.parentNode.removeChild(wrap); });
       render([top(true), row]);
       gate();

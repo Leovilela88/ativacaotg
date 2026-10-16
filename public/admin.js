@@ -59,7 +59,15 @@
   }
 
   // Envia vários arquivos em sequência, mostrando progresso. Retorna as chaves enviadas.
+  // Fotos grandes (de camera/celular) sao reduzidas antes de subir: ate 1600 px em JPEG, para carregar rapido na TV.
+  function prepare(f) {
+    if (/^image\/(jpeg|png|webp)$/.test(f.type) && f.size > 600 * 1024) return makeThumb(f, 1600, '').catch(function () { return f; });
+    return Promise.resolve(f);
+  }
   function uploadMany(files) {
+    return Promise.all(Array.prototype.map.call(files, prepare)).then(uploadManyRaw);
+  }
+  function uploadManyRaw(files) {
     var keys = [];
     var items = Array.prototype.map.call(files, function (f) { var u = { name: f.name, pct: 0, err: '', done: false }; S.uploads.push(u); return { f: f, u: u }; });
     paintUploads();
@@ -248,17 +256,18 @@
     return a;
   }
   // Reduz a foto (ate 480 px, JPEG) antes de enviar: miniaturas leves carregam rapido na TV.
-  function makeThumb(file) {
+  function makeThumb(file, max, suffix) {
+    max = max || 480; if (suffix == null) suffix = '-mini';
     return new Promise(function (resolve, reject) {
       var url = URL.createObjectURL(file), img = new Image();
       img.onload = function () {
-        var r = Math.min(1, 480 / Math.max(img.width, img.height));
+        var r = Math.min(1, max / Math.max(img.width, img.height));
         var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * r)); c.height = Math.max(1, Math.round(img.height * r));
         var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
         c.toBlob(function (b) {
           URL.revokeObjectURL(url);
           if (!b) return reject(new Error('não foi possível reduzir a foto'));
-          resolve(new File([b], file.name.replace(/\.[^.]+$/, '') + '-mini.jpg', { type: 'image/jpeg' }));
+          resolve(new File([b], file.name.replace(/\.[^.]+$/, '') + suffix + '.jpg', { type: 'image/jpeg' }));
         }, 'image/jpeg', 0.85);
       };
       img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('imagem inválida')); };
@@ -302,7 +311,7 @@
       ondragover: function (e) { e.preventDefault(); drop.classList.add('over'); }, ondragleave: function () { drop.classList.remove('over'); },
       ondrop: function (e) { e.preventDefault(); drop.classList.remove('over'); send(e.dataTransfer.files); } },
       h('div', { style: 'font-size:18px;font-weight:600', text: 'Arraste fotos, vídeos e sons aqui' }),
-      h('div', { class: 'hint', style: 'margin-top:6px', text: 'ou clique para escolher. Formatos: jpg, png, webp, gif, mp4, webm, mp3, m4a, ogg, wav. Até 300 MB cada.' }), input);
+      h('div', { class: 'hint', style: 'margin-top:6px', text: 'ou clique para escolher. Formatos: jpg, png, webp, gif, mp4, webm, mp3, m4a, ogg, wav. Até 300 MB cada. Fotos grandes são reduzidas sozinhas (até 1600 px) para carregar rápido.' }), input);
     var grid = h('div', { class: 'grid' }, S.media.map(function (m) {
       var u = urlOf(m.key), t = typeOf(m.key);
       return h('div', { class: 'media' },
