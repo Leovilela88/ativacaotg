@@ -17,3 +17,13 @@
 .cards button { padding: 2.2vmin 3vmin; }
 .mrow { margin-bottom: 1.8vmin; }
 .mrow .copy { font-size: 1.9vmin; }
+
+/* 4 ativacoes cabem sem rolar em telas de ~720 px */
+.logo { width: min(22vmin, 50vw); }
+.rule { margin: 1.6vmin 0 1.4vmin; }
+.eyebrow { margin-bottom: 2vmin; }
+.cards .label b { font-size: 2.5vmin; }
+.cards .label small { font-size: 1.9vmin; }
+.cards button { padding: 1.6vmin 3vmin; }
+.mrow { margin-bottom: 1.4vmin; }
+.foot { margin-top: 0; }

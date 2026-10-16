@@ -260,7 +260,7 @@ http.createServer(async (req, res) => {
     if (rel.indexOf('/m/') === 0 && (req.method === 'GET' || req.method === 'HEAD')) return await serveMedia(req, res, rel.slice(3));
     if (rel === '/projeta/sw.js') return serveStatic(req, res, '/sw.js', { 'Service-Worker-Allowed': '/projeta' });   // service worker so da Projeta
     if (rel === '/') return serveStatic(req, res, '/menu.html');                       // menu principal (pede a senha)
-    if (content.IDS.some((id) => rel === '/' + id || rel === '/' + id + '/')) return serveStatic(req, res, '/index.html');   // /peixes, /aves, /projeta
+    if (content.IDS.some((id) => rel === '/' + id || rel === '/' + id + '/')) return serveStatic(req, res, '/index.html');   // /peixes, /aves, /plantas, /projeta
     const mm = /^\/manifest\/([a-z0-9-]+)\.webmanifest$/.exec(rel);
     if (mm && content.IDS.includes(mm[1])) {
       // Ao instalar/adicionar a tela inicial, o app abre direto na propria ativacao (nunca no menu principal).
