@@ -20,6 +20,25 @@
     if (!base) return src.indexOf('/') < 0 ? 'media/' + src : src;
     return base + '/' + src.replace(/^media\//, '');
   }
+  // Foto quadrada (object-fit: cover) centrada no ponto escolhido no admin (f = {x,y} de 0 a 1). Sem ajuste: centro, como sempre.
+  function focusPos(w, h, f) {
+    if (!f || !w || !h) return '50% 50%';
+    var r = w / h, px = 50, py = 50;
+    if (r > 1) { var ox = Math.min(Math.max(f.x * r - 0.5, 0), r - 1); px = ox / (r - 1) * 100; }
+    else if (r < 1) { var oy = Math.min(Math.max(f.y / r - 0.5, 0), 1 / r - 1); py = oy / (1 / r - 1) * 100; }
+    return px + '% ' + py + '%';
+  }
+  function photo(cls, key, f) {
+    var img = document.createElement('img');
+    img.className = cls; img.alt = '';
+    if (f) {
+      var apply = function () { img.style.objectPosition = focusPos(img.naturalWidth, img.naturalHeight, f); };
+      img.addEventListener('load', apply);
+      img.src = mediaUrl(key);
+      if (img.complete && img.naturalWidth) apply();
+    } else img.src = mediaUrl(key);
+    return img;
+  }
   function el(tag, attrs, children) {
     var n = document.createElement(tag);
     for (var k in (attrs || {})) {
@@ -243,7 +262,7 @@
       var badge = el('span', { class: 'badge', text: String.fromCharCode(65 + i) });
       var picKey = q.images && q.images[i], pic = null;
       if (picKey) {
-        pic = el('img', { class: 'pic', src: mediaUrl(picKey), alt: '' });
+        pic = photo('pic', picKey, q.imageFocus && q.imageFocus[i]);
         pic.addEventListener('error', function () { if (pic.parentNode) { pic.parentNode.replaceChild(badge, pic); b.classList.remove('has-pic'); } });
       }
       var b = el('button', { class: pic ? 'has-pic' : '' }, [
@@ -403,7 +422,7 @@
     var detail = ok
       ? el('div', { class: 'cap', text: r.caption || 'Resposta certa!' })
       : el('div', { class: 'reveal' }, [el('small', { text: 'A resposta certa era' })].concat(
-          (q.images && q.images[q.answer]) ? [el('img', { class: 'revimg', src: mediaUrl(q.images[q.answer]), alt: '' }), el('b', { text: q.options[q.answer] })]
+          (q.images && q.images[q.answer]) ? [photo('revimg', q.images[q.answer], q.imageFocus && q.imageFocus[q.answer]), el('b', { text: q.options[q.answer] })]
                                            : [el('b', { text: String.fromCharCode(65 + q.answer) + '. ' + q.options[q.answer] })]));
     var info = [
       ico,

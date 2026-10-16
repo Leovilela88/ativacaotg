@@ -219,27 +219,29 @@
     function move(d) { var j = pi + d; if (j < 0 || j >= quiz.questions.length) return; var t = quiz.questions[pi]; quiz.questions[pi] = quiz.questions[j]; quiz.questions[j] = t; mark(); render(); }
 
     p.images = alignImgs(p);
+    p.imageFocus = alignFocus(p);
     var opts = p.options.map(function (o, i) {
       var imgKey = p.images[i], imgUrl = imgKey ? urlOf(imgKey) : '';
-      var photoSel = h('select', { class: 'photosel', title: 'Foto desta alternativa', onchange: function (e) { p.images[i] = e.target.value; mark(); render(); } },
+      var photoSel = h('select', { class: 'photosel', title: 'Foto desta alternativa', onchange: function (e) { p.images[i] = e.target.value; p.imageFocus[i] = null; mark(); render(); } },
         h('option', { value: '', text: 'Sem foto' }),
         mediaOptions(imgKey, 'image').map(function (k) { return h('option', { value: k, selected: imgKey === k, text: k }); }));
       var photoFile = h('input', { type: 'file', accept: 'image/*', style: 'display:none', onchange: function (e) {
         var f = e.target.files[0]; if (!f) return;
         say('Reduzindo e enviando a foto...', 'dirty');
         makeThumb(f).then(function (small) { return uploadMany([small]); })
-          .then(function (keys) { if (keys.length) { p.images[i] = keys[0]; mark(); } render(); })
+          .then(function (keys) { if (keys.length) { p.images[i] = keys[0]; p.imageFocus[i] = null; mark(); } render(); })
           .catch(function (er) { say('Foto: ' + er.message, 'err'); });
       } });
       return h('div', { class: 'opt optrow' },
         h('input', { type: 'radio', name: 'ans-' + S.act + '-' + S.qi + '-' + pi, checked: p.answer === i, title: 'Resposta correta', onchange: function () { p.answer = i; mark(); } }),
         h('span', { class: 'letter', text: String.fromCharCode(65 + i) }),
         h('input', { type: 'text', value: o, placeholder: 'Alternativa ' + String.fromCharCode(65 + i), oninput: function (e) { p.options[i] = e.target.value; mark(); } }),
-        imgUrl ? h('img', { class: 'optimg', src: imgUrl, alt: '' }) : null,
+        imgUrl ? thumbWithFocus(imgUrl, p.imageFocus[i]) : null,
+        imgUrl ? h('button', { class: 'btn small', title: 'Escolher que parte da foto aparece no quadradinho', text: p.imageFocus[i] ? 'Corte ajustado' : 'Ajustar corte', onclick: function () { openFocus(p, i); } }) : null,
         photoSel,
         h('button', { class: 'btn small', text: 'Enviar foto', onclick: function () { photoFile.click(); } }), photoFile,
         p.options.length > 2 ? h('button', { class: 'btn small', text: 'Remover', onclick: function () {
-          p.options.splice(i, 1); p.images.splice(i, 1); if (p.answer === i) p.answer = 0; else if (p.answer > i) p.answer--; mark(); render();
+          p.options.splice(i, 1); p.images.splice(i, 1); p.imageFocus.splice(i, 1); if (p.answer === i) p.answer = 0; else if (p.answer > i) p.answer--; mark(); render();
         } }) : null);
     });
 
@@ -273,13 +275,70 @@
       h('div', { class: 'row' }, soundSel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar áudio', onclick: function () { soundFile.click(); } }), soundFile),
       p.sound && urlOf(p.sound) ? h('div', { class: 'prev' }, h('audio', { src: urlOf(p.sound), controls: '' })) : null,
       h('label', { class: 'lbl', text: 'Alternativas (marque a correta). A foto pequena substitui a letra no jogo.' }), opts,
-      p.options.length < 6 ? h('button', { class: 'btn small', text: 'Adicionar alternativa', onclick: function () { p.options.push(''); p.images.push(''); mark(); render(); } }) : null,
+      p.options.length < 6 ? h('button', { class: 'btn small', text: 'Adicionar alternativa', onclick: function () { p.options.push(''); p.images.push(''); p.imageFocus.push(null); mark(); render(); } }) : null,
       h('label', { class: 'lbl', text: 'Vídeo ou foto da resposta certa (aparece ao acertar e também ao errar)' }),
       h('div', { class: 'row' }, sel, h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Enviar novo arquivo', onclick: function () { file.click(); } }), file),
       preview(r.src),
       h('label', { class: 'lbl', text: 'Legenda (opcional)' }),
       h('input', { type: 'text', value: r.caption || '', placeholder: 'Ex.: Acertou! É o Dourado.', oninput: function (e) { r.caption = e.target.value; mark(); } }),
       copyQuestionBox(quiz, p, pi));
+  }
+  function alignFocus(p) {
+    var a = Array.isArray(p.imageFocus) ? p.imageFocus.slice() : [];
+    while (a.length < p.options.length) a.push(null);
+    a.length = p.options.length;
+    return a;
+  }
+  // mesma conta do jogo: posicao do recorte quadrado (object-fit: cover) para centrar no ponto f
+  function focusPos(w, h, f) {
+    if (!f || !w || !h) return '50% 50%';
+    var r = w / h, px = 50, py = 50;
+    if (r > 1) { var ox = Math.min(Math.max(f.x * r - 0.5, 0), r - 1); px = ox / (r - 1) * 100; }
+    else if (r < 1) { var oy = Math.min(Math.max(f.y / r - 0.5, 0), 1 / r - 1); py = oy / (1 / r - 1) * 100; }
+    return px + '% ' + py + '%';
+  }
+  // Janela para escolher o corte da foto: clique/arraste na foto; o quadrado mostra o que vai aparecer.
+  function openFocus(p, i) {
+    var key = p.images[i], url = urlOf(key);
+    if (!url) { alert('Defina MEDIA_BASE_URL no Railway para ver a foto aqui.'); return; }
+    var f = (p.imageFocus && p.imageFocus[i]) || { x: 0.5, y: 0.5 }, drag = false;
+    var img = h('img', { src: url, alt: '', draggable: 'false', class: 'fimg' });
+    var win = h('div', { class: 'fwin' });
+    var stage = h('div', { class: 'fstage' }, img, win);
+    var prev = h('img', { class: 'fprev', src: url, alt: '' });
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+    function layout() {
+      var dw = img.clientWidth, dh = img.clientHeight, s = Math.min(dw, dh);
+      if (!dw || !dh) return;
+      var cx = clamp(f.x * dw, s / 2, dw - s / 2), cy = clamp(f.y * dh, s / 2, dh - s / 2);
+      f = { x: cx / dw, y: cy / dh };
+      win.style.width = s + 'px'; win.style.height = s + 'px'; win.style.left = (cx - s / 2) + 'px'; win.style.top = (cy - s / 2) + 'px';
+      prev.style.objectPosition = focusPos(img.naturalWidth, img.naturalHeight, f);
+    }
+    function pick(e) { var r = img.getBoundingClientRect(); f = { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }; layout(); }
+    img.addEventListener('load', layout);
+    stage.addEventListener('pointerdown', function (e) { drag = true; try { stage.setPointerCapture(e.pointerId); } catch (x) {} pick(e); });
+    stage.addEventListener('pointermove', function (e) { if (drag) pick(e); });
+    stage.addEventListener('pointerup', function () { drag = false; });
+    function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+    function commit(val) { p.imageFocus = alignFocus(p); p.imageFocus[i] = val; mark(); close(); render(); }
+    var ov = h('div', { class: 'modal', onclick: function (e) { if (e.target === ov) close(); } },
+      h('div', { class: 'mcard' },
+        h('h3', { text: 'Ajustar o corte: ' + (p.options[i] || 'alternativa ' + String.fromCharCode(65 + i)) }),
+        h('p', { class: 'hint', text: 'Clique ou arraste na foto para escolher o que deve aparecer no quadradinho do jogo.' }),
+        stage,
+        h('div', { class: 'row', style: 'margin-top:14px;align-items:center' },
+          h('div', {}, prev, h('div', { class: 'hint', style: 'text-align:center;margin-top:4px', text: 'No jogo' })),
+          h('div', { class: 'row', style: 'margin-left:auto' },
+            h('button', { class: 'btn', text: 'Centralizar', onclick: function () { commit(null); } }),
+            h('button', { class: 'btn', text: 'Cancelar', onclick: close }),
+            h('button', { class: 'btn primary', text: 'Salvar corte', onclick: function () { commit({ x: Math.round(f.x * 1000) / 1000, y: Math.round(f.y * 1000) / 1000 }); } })))));
+    document.body.appendChild(ov);
+  }
+  function thumbWithFocus(url, f) {
+    var t = h('img', { class: 'optimg', src: url, alt: '' });
+    if (f) t.addEventListener('load', function () { t.style.objectPosition = focusPos(t.naturalWidth, t.naturalHeight, f); });
+    return t;
   }
   function alignImgs(p) {
     var a = Array.isArray(p.images) ? p.images.slice() : [];
@@ -325,6 +384,7 @@
       else if (cap) p.reward = { type: 'text', caption: cap };
       else delete p.reward;
       if (Array.isArray(p.images) && p.images.some(Boolean)) p.images = alignImgs(p); else delete p.images;
+      if (p.images && Array.isArray(p.imageFocus) && p.imageFocus.some(Boolean)) p.imageFocus = alignFocus(p); else delete p.imageFocus;
     }); }); });
     return c;
   }
