@@ -124,7 +124,7 @@
   function calcPoints(left, limit) {
     return Math.max(10, Math.round(10 + 90 * (left / limit)));
   }
-  function limitMs() { return ((quiz && quiz.timeLimit) || 30) * 1000; }
+  function limitMs() { return ((quiz && quiz.timeLimit) || 45) * 1000; }      // 45 s por padrao; os pontos (10 a 100) se dividem ao longo deste tempo
 
   // ---------- peças comuns ----------
   function top(withProgress) {
