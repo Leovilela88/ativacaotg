@@ -132,7 +132,7 @@
       h('input', { type: 'text', value: quiz.subtitle || '', oninput: function (e) { quiz.subtitle = e.target.value; mark(); } }),
       h('label', { class: 'lbl', text: 'Regras do jogo' }),
       h('div', { class: 'row' },
-        numField('Tempo por pergunta (s)', quiz.timeLimit == null ? 45 : quiz.timeLimit, 5, 300, function (n) { quiz.timeLimit = n; mark(); }),
+        numField('Tempo por pergunta (s)', quiz.timeLimit == null ? 50 : quiz.timeLimit, 5, 300, function (n) { quiz.timeLimit = n; mark(); }),
         lifeField(quiz, 'fifty', 'Eliminações por partida')),
       h('label', { class: 'row', style: 'margin-top:12px;cursor:pointer' },
         h('input', { type: 'checkbox', checked: !!quiz.muteVideos, style: 'width:20px;height:20px;accent-color:#c6f432', onchange: function (e) { if (e.target.checked) quiz.muteVideos = true; else delete quiz.muteVideos; mark(); } }),

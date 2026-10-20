@@ -143,7 +143,7 @@
   function calcPoints(left, limit) {
     return Math.max(10, Math.round(10 + 90 * (left / limit)));
   }
-  function limitMs() { return ((quiz && quiz.timeLimit) || 45) * 1000; }      // 45 s por padrao; os pontos (10 a 100) se dividem ao longo deste tempo
+  function limitMs() { return ((quiz && quiz.timeLimit) || 50) * 1000; }      // 50 s por padrao; os pontos (10 a 100) se dividem ao longo deste tempo
 
   // ---------- peças comuns ----------
   function top(withProgress) {
@@ -306,7 +306,8 @@
     // Pergunta de canto: o som toca ao abrir; o relogio so comeca quando ele realmente toca.
     var audio = null, eq = null, listenB = null, blocked = false;
     if (q.sound) {
-      audio = el('audio', { src: mediaUrl(q.sound), preload: 'auto' });
+      audio = el('audio', { src: mediaUrl(q.sound), preload: 'auto', loop: '' });   // o canto repete ate a pergunta acabar
+      audio.loop = true;
       eq = el('div', { class: 'eq' }, [el('i'), el('i'), el('i'), el('i'), el('i'), el('i'), el('i')]);
       listenB = el('button', { class: 'help', text: 'Toque para ouvir', hidden: '' });   // so aparece se o navegador bloquear o som
       listenB.addEventListener('click', function () {
@@ -337,7 +338,8 @@
 
     if (!audio) { startClock(); return; }
     audio.addEventListener('playing', function () { eq.className = 'eq on'; listenB.hidden = true; startClock(); });
-    audio.addEventListener('pause', function () { eq.className = 'eq'; });
+    audio.addEventListener('pause', function () { if (audio.paused) eq.className = 'eq'; });      // com loop, algumas voltas avisam "pausou": so apaga se parou de verdade
+    audio.addEventListener('play', function () { eq.className = 'eq on'; });
     audio.addEventListener('ended', function () { eq.className = 'eq'; });
     audio.addEventListener('error', function () { listenB.hidden = true; say('Não foi possível tocar o áudio.'); startClock(); });
     var pr = audio.play();
