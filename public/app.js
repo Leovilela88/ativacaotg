@@ -306,8 +306,8 @@
     // Pergunta de canto: o som toca ao abrir; o relogio so comeca quando ele realmente toca.
     var audio = null, eq = null, listenB = null, blocked = false;
     if (q.sound) {
-      audio = el('audio', { src: mediaUrl(q.sound), preload: 'auto', loop: '' });   // o canto repete ate a pergunta acabar
-      audio.loop = true;
+      audio = el('audio', { src: mediaUrl(q.sound), preload: 'auto' });
+      if (ACT !== 'projeta') { audio.setAttribute('loop', ''); audio.loop = true; }   // Sao Carlos: o canto repete ate a pergunta acabar (a Projeta, ja instalada, segue como estava)
       eq = el('div', { class: 'eq' }, [el('i'), el('i'), el('i'), el('i'), el('i'), el('i'), el('i')]);
       listenB = el('button', { class: 'help', text: 'Toque para ouvir', hidden: '' });   // so aparece se o navegador bloquear o som
       listenB.addEventListener('click', function () {
