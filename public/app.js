@@ -73,6 +73,25 @@
     x.onerror = function () { cb(null); };
     x.send(body ? JSON.stringify(body) : null);
   }
+  // ---------- ranking LOCAL (so /projeta): cada tablet guarda o proprio ranking, sem depender de internet ----------
+  // As pontuacoes seguem para o servidor em segundo plano (e, sem internet, para a fila do service worker); a tela usa so o ranking local.
+  // /projeta?ranking=central volta ao ranking do servidor; /projeta?ranking=zerar apaga o ranking deste tablet.
+  var LOCALRANK = ACT === 'projeta' && !/[?&]ranking=central/.test(location.search);
+  var memRank = {};
+  function lrKey(qid) { return 'tg-rank-' + ACT + '-' + qid; }
+  function lrLoad(qid) { try { var j = localStorage.getItem(lrKey(qid)); return j ? JSON.parse(j) : []; } catch (e) { return memRank[qid] || []; } }
+  function lrSave(qid, list) { memRank[qid] = list; try { localStorage.setItem(lrKey(qid), JSON.stringify(list)); } catch (e) {} }
+  function lrAdd(qid, e) {
+    var l = lrLoad(qid); l.push(e);
+    l.sort(function (a, b) { return b.points - a.points || a.ms - b.ms || a.at - b.at; });   // mesmo criterio do servidor
+    l = l.slice(0, 1000); lrSave(qid, l);
+    var rank = 0; for (var i = 0; i < l.length; i++) if (l[i].id === e.id) { rank = i + 1; break; }
+    return { id: e.id, rank: rank, players: l.length };
+  }
+  function lrClear() {
+    try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('tg-rank-') === 0) localStorage.removeItem(k); } } catch (e) {}
+    memRank = {};
+  }
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function svg(html) { var s = el('span', { class: 'ico' }); s.innerHTML = html; return s; }
@@ -494,8 +513,13 @@
       ])
     ], 0);
     setTimeout(function () { var b = ring.querySelector('.bar'); if (b) b.style.strokeDashoffset = String(326.7 * (1 - ratio)); }, 120);
+    if (LOCALRANK) {
+      var mine = lrAdd(thisQuiz.id, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: player, points: pts, correct: correct, total: total, ms: Math.round(spent), at: Date.now() });
+      myId = mine.id; rankBtn.disabled = false;
+      rankLine.textContent = 'Você está em ' + mine.rank + 'º lugar entre ' + mine.players + ' jogador' + (mine.players > 1 ? 'es' : '') + ' neste tablet.';
+    }
     ajax('POST', 'api/score', { quizId: thisQuiz.id, name: player, points: pts, correct: correct, total: total, ms: Math.round(spent) }, function (r) {
-      if (!rankLine.parentNode) return;
+      if (LOCALRANK || !rankLine.parentNode) return;      // no modo local a tela ja mostra a posicao do tablet; o envio segue so para o registro central
       if (r && r.queued) { rankLine.textContent = 'Sem internet: sua pontuação foi guardada e será enviada depois.'; }
       else if (r) { myId = r.id; rankLine.textContent = r.rank ? 'Você está em ' + r.rank + 'º lugar entre ' + r.players + ' jogador' + (r.players > 1 ? 'es' : '') : 'Pontuação registrada.'; rankBtn.disabled = false; }
       else { rankLine.textContent = 'Não foi possível salvar no ranking agora.'; }
@@ -504,9 +528,9 @@
 
   function rankingScreen(quizId, highlight) {
     var id = quizId || (data.quizzes[0] && data.quizzes[0].id) || '';
-    render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), el('p', { class: 'sub', text: 'Carregando...' })]);
-    ajax('GET', 'api/ranking?activation=' + encodeURIComponent(ACT) + '&limit=100&_=' + Date.now(), null, function (r) {
-      if (!r) { render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), el('p', { class: 'sub', text: 'Ranking indisponível sem internet.' }), el('div', { class: 'actions' }, [el('button', { text: 'Voltar', onclick: home })])]); return; }
+    var title = LOCALRANK ? 'Ranking deste tablet' : 'Ranking';
+    function draw(r) {
+      if (!r) { render([top(false), el('p', { class: 'eyebrow', text: title }), el('p', { class: 'sub', text: 'Ranking indisponível sem internet.' }), el('div', { class: 'actions' }, [el('button', { text: 'Voltar', onclick: home })])]); return; }
       var all = (r && r.ranking) || {};
       var tabs = el('div', { class: 'tabs' }, data.quizzes.length < 2 ? [] : data.quizzes.map(function (q) {
         return el('button', { class: 'tab' + (q.id === id ? ' on' : ''), text: q.title, onclick: function () { rankingScreen(q.id, highlight); } });
@@ -518,7 +542,7 @@
           el('span', { class: 'pos', text: String(i + 1) }), el('span', { class: 'nm', text: e.name }), el('span', { class: 'pt', text: fmt(e.points) })
         ]));
       });
-      render([top(false), el('p', { class: 'eyebrow', text: 'Ranking' }), tabs, board,
+      render([top(false), el('p', { class: 'eyebrow', text: title }), tabs, board,
         el('div', { class: 'actions' }, [el('button', { text: 'Voltar', onclick: home })])], 0);
 
       // A lista rola por dentro (a tela fica parada). Mostra o jogador logo que possivel.
@@ -533,7 +557,14 @@
         board.scrollTop += d * (board.clientHeight / 4);
         e.preventDefault(); return true;
       };
-    });
+    }
+    if (LOCALRANK) {
+      var local = {}; data.quizzes.forEach(function (q) { local[q.id] = lrLoad(q.id).slice(0, 100); });
+      draw({ ranking: local });
+    } else {
+      render([top(false), el('p', { class: 'eyebrow', text: title }), el('p', { class: 'sub', text: 'Carregando...' })]);
+      ajax('GET', 'api/ranking?activation=' + encodeURIComponent(ACT) + '&limit=100&_=' + Date.now(), null, draw);
+    }
   }
 
   // ---------- navegação por controle remoto (espacial) ----------
@@ -672,6 +703,10 @@
     hm.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   })();
 
+  if (/[?&]ranking=zerar/.test(location.search)) {
+    if (window.confirm('Zerar o ranking deste tablet? As pontuações guardadas aqui serão apagadas.')) lrClear();
+    location.replace(location.pathname); return;
+  }
   if (!ACT) { app.textContent = 'Endereço sem ativação. Peça o link correto.'; return; }
   ajax('GET', 'api/activation?id=' + encodeURIComponent(ACT) + '&_=' + Date.now(), null, function (j) {
     if (!j) { app.textContent = 'Ativação não encontrada ou sem conexão.'; return; }
