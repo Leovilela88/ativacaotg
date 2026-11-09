@@ -177,20 +177,31 @@
       });
     });
     if (same) dests.push(same);                                 // "duplicar neste quiz" por ultimo
+    var empty = S.content.activations.map(function (a, ai) { return { a: a, ai: ai }; }).filter(function (x) { return !x.a.quizzes.length; });   // ativacao ainda sem quiz: cria um na hora
     var sel = h('select', { style: 'max-width:380px', onchange: function (e) { S.copyTo = e.target.value; } },
       dests.map(function (d) {
         var v = d.ai + ':' + d.qi;
         return h('option', { value: v, selected: S.copyTo === v, text: d.q === quiz ? 'Este quiz (duplicar aqui)' : actName(d.a) + ' · ' + (d.q.title || '(sem título)') });
-      }));
+      }).concat(empty.map(function (x) {
+        var v = 'novo:' + x.ai;
+        return h('option', { value: v, selected: S.copyTo === v, text: actName(x.a) + ' · (criar um quiz novo)' });
+      })));
     var btn = h('button', { class: 'btn', style: 'white-space:nowrap', text: 'Copiar pergunta' });
     btn.addEventListener('click', function () {
-      var v = sel.value.split(':'), dest = S.content.activations[parseInt(v[0], 10)] && S.content.activations[parseInt(v[0], 10)].quizzes[parseInt(v[1], 10)];
+      var v = sel.value.split(':'), dest;
+      if (v[0] === 'novo') {
+        var na = S.content.activations[parseInt(v[1], 10)];
+        if (!na) return;
+        dest = { id: 'quiz-' + Date.now().toString(36), title: 'Novo quiz', subtitle: '', questions: [] };
+        na.quizzes.push(dest);
+        S.copyTo = null;
+      } else dest = S.content.activations[parseInt(v[0], 10)] && S.content.activations[parseInt(v[0], 10)].quizzes[parseInt(v[1], 10)];
       if (!dest) return;
       var copy = JSON.parse(JSON.stringify(p));                  // copia independente: editar uma nao altera a outra
       S.copyTo = sel.value;
       if (dest === quiz) { dest.questions.splice(pi + 1, 0, copy); mark(); render(); say('Pergunta duplicada logo abaixo. Clique em Salvar alterações.', 'dirty'); return; }
       dest.questions.push(copy);
-      mark(); say('Pergunta copiada para "' + (dest.title || 'sem título') + '" (agora com ' + dest.questions.length + '). Clique em Salvar alterações.', 'dirty');
+      mark(); if (v[0] === 'novo') render(); say('Pergunta copiada para "' + (dest.title || 'sem título') + '" (agora com ' + dest.questions.length + '). Clique em Salvar alterações.', 'dirty');
       btn.textContent = 'Copiada!'; setTimeout(function () { btn.textContent = 'Copiar pergunta'; }, 1800);
     });
     return h('div', { class: 'copyq' },
