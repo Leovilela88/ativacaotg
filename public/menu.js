@@ -6,7 +6,8 @@
     { id: 'peixes', title: 'Ativação Peixes São Carlos' },
     { id: 'aves', title: 'Ativação Aves São Carlos' },
     { id: 'plantas', title: 'Ativação Plantas Comestíveis São Carlos' },
-    { id: 'projeta', title: 'Ativação Projeta 2027' }
+    { id: 'projeta', title: 'Ativação Projeta 2027' },
+    { id: 'ribeirao', title: 'Ativação Ribeirão Preto' }
   ];
 
   function el(tag, attrs, kids) {

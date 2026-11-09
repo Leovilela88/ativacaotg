@@ -21,6 +21,7 @@ Conecte o repositório no Railway; ele detecta Node e executa `npm start`. Healt
 | `/aves` | Ativação Aves São Carlos |
 | `/plantas` | Ativação Plantas Comestíveis São Carlos |
 | `/projeta` | Ativação Projeta 2027 |
+| `/ribeirao` | Ativação Ribeirão Preto |
 | `/admin` | Painel: abas por ativação (Perguntas e Ranking) e Mídias |
 
 Os links das TVs e telas são os de cada ativação. Dentro delas, os botões de voltar levam só ao início da própria
