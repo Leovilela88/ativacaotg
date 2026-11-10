@@ -307,3 +307,15 @@ html.calm #bg { top: 0; left: 0; right: 0; bottom: 0; animation: none; will-chan
   .rwd.photo .rwd-media img { max-width: 56vw; }
   .rwd.photo .rwd-info { max-width: 34vw; }
 }
+
+/* Ribeirao: tela do telefone (so nessa ativacao) */
+.consent { max-width: min(88vw, 100vmin); margin: 0 0 2vmin; font-size: 2.1vmin; line-height: 1.45; text-align: center; opacity: .85; }
+.phonebox { margin-bottom: 2vmin; font-size: 4.6vmin; }
+.phonebox .ph { letter-spacing: .06em; }
+.agree { display: flex; align-items: center; margin-bottom: 2vmin; padding: 1.4vmin 2.6vmin; font-size: 2.1vmin; text-align: left; border-radius: 2vmin; }
+.agree .cbox { flex: 0 0 auto; width: 3vmin; height: 3vmin; margin-right: 1.8vmin; border: .3vmin solid var(--lime); border-radius: .7vmin; position: relative; }
+.agree.on .cbox { background: var(--lime); }
+.agree.on .cbox::after { content: ''; position: absolute; left: 1vmin; top: .3vmin; width: .8vmin; height: 1.7vmin; border: solid #06130b; border-width: 0 .35vmin .35vmin 0; transform: rotate(45deg); }
+.phonekb { width: min(60vw, 62vmin); }
+.phonekb .key { max-width: none; }
+.skip { margin-top: 1vmin; font-size: 2vmin; }

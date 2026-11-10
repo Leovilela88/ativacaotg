@@ -104,7 +104,7 @@ async function publicApi(req, res, rel, url) {
     const out = {};
     // Cada ativacao so enxerga o ranking dos proprios quizzes.
     const pool = act ? ((c.activations.find((a) => a.id === act) || { quizzes: [] }).quizzes) : content.allQuizzes(c);
-    for (const q of pool) if (!only || q.id === only) out[q.id] = await ranking.top(q.id, limit);
+    for (const q of pool) if (!only || q.id === only) out[q.id] = (await ranking.top(q.id, limit)).map(ranking.pub);   // nunca expor telefone
     sendJson(res, 200, { ranking: out });
     return true;
   }
@@ -124,7 +124,7 @@ async function publicApi(req, res, rel, url) {
     const ok = quiz && name && [b.points, b.correct, b.total, b.ms].every(Number.isInteger)
       && b.total === n && b.correct >= 0 && b.correct <= n && b.points >= 0 && b.points <= 100 * n && b.ms >= 0 && b.ms <= 86400000;
     if (!ok) { sendJson(res, 400, { error: 'pontuacao invalida' }); return true; }
-    sendJson(res, 200, await ranking.add(quiz.id, { name, points: b.points, correct: b.correct, total: b.total, ms: b.ms }));
+    sendJson(res, 200, await ranking.add(quiz.id, { name, phone: b.consent === true ? ranking.cleanPhone(b.phone) : '', points: b.points, correct: b.correct, total: b.total, ms: b.ms }));
     return true;
   }
   return false;

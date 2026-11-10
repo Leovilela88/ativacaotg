@@ -436,9 +436,11 @@
     if (!q) { S.rank = []; return Promise.resolve(); }
     return api('GET', '/api/admin/ranking?quizId=' + encodeURIComponent(q.id)).then(function (j) { S.rank = j.entries || []; }).catch(function () { S.rank = []; });
   }
+  // Telefone guardado so com digitos -> (16) 99999-9999
+  function fonte(d) { d = String(d || ''); return d.length === 11 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7) : d.length === 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6) : d; }
   function downloadCsv(qz) {
-    var rows = [['posicao', 'nome', 'pontos', 'acertos', 'total_perguntas', 'tempo_segundos', 'data']];
-    (S.rank || []).forEach(function (e, i) { rows.push([i + 1, e.name, e.points, e.correct, e.total, (e.ms / 1000).toFixed(1), new Date(e.at).toLocaleString('pt-BR')]); });
+    var rows = [['posicao', 'nome', 'telefone', 'pontos', 'acertos', 'total_perguntas', 'tempo_segundos', 'data']];
+    (S.rank || []).forEach(function (e, i) { rows.push([i + 1, e.name, e.phone ? '\t' + fonte(e.phone) : '', e.points, e.correct, e.total, (e.ms / 1000).toFixed(1), new Date(e.at).toLocaleString('pt-BR')]); });
     var csv = '\ufeff' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
     var a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -459,8 +461,11 @@
         } })));
     if (S.rank == null) return h('div', {}, head, h('p', { class: 'hint', text: 'Carregando...' }));
     if (!S.rank.length) return h('div', {}, head, h('p', { class: 'hint', text: 'Ninguém jogou este quiz ainda.' }));
+    var hasPhone = S.rank.some(function (e) { return e.phone; });
     var rows = S.rank.map(function (e, i) {
-      return h('tr', {}, h('td', { text: String(i + 1) }), h('td', { text: e.name }), h('td', { text: String(e.points) }),
+      return h('tr', {}, h('td', { text: String(i + 1) }), h('td', { text: e.name }),
+        hasPhone ? h('td', {}, e.phone ? h('a', { href: 'https://wa.me/55' + e.phone, target: '_blank', rel: 'noopener', style: 'color:inherit', text: fonte(e.phone) }) : h('span', { text: '-' })) : null,
+        h('td', { text: String(e.points) }),
         h('td', { text: e.correct + '/' + e.total }), h('td', { text: (e.ms / 1000).toFixed(1) + ' s' }),
         h('td', { text: new Date(e.at).toLocaleString('pt-BR') }),
         h('td', {}, h('button', { class: 'btn small danger', text: 'Excluir', onclick: function () {
@@ -469,7 +474,7 @@
         } })));
     });
     return h('div', {}, head, h('table', { class: 'tbl' },
-      h('thead', {}, h('tr', {}, ['#', 'Nome', 'Pontos', 'Acertos', 'Tempo', 'Quando', ''].map(function (t) { return h('th', { text: t }); }))), h('tbody', {}, rows)));
+      h('thead', {}, h('tr', {}, ['#', 'Nome'].concat(hasPhone ? ['Telefone'] : [], ['Pontos', 'Acertos', 'Tempo', 'Quando', '']).map(function (t) { return h('th', { text: t }); }))), h('tbody', {}, rows)));
   }
 
   // ---------- montagem ----------

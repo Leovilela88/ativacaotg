@@ -9,7 +9,7 @@
   var ACT = (seg || (/[?&]a=([a-z0-9-]+)/.exec(location.search) || [])[1] || '').toLowerCase();
   var actTitle = '';
   var PROXY = ACT === 'projeta' && !/[?&]proxy=0/.test(location.search);
-  var player = '', idleTimer = null, tick = null, onKey = null, screenToken = 0;
+  var player = '', idleTimer = null, tick = null, onKey = null, screenToken = 0; var playerPhone = '';
 
   // ---------- helpers ----------
   // Midias: se MEDIA_BASE_URL (bucket R2) estiver definida, "video1.mp4" vira "<bucket>/video1.mp4".
@@ -179,7 +179,7 @@
 
   // ---------- telas ----------
   function home() {
-    quiz = null; qi = 0; player = '';          // tela compartilhada: o proximo jogador digita o proprio nome
+    quiz = null; qi = 0; player = ''; playerPhone = '';          // tela compartilhada: o proximo jogador digita o proprio nome
     if (!data.quizzes.length) {
       render([el('img', { class: 'logo', src: 'img/logo.png', alt: 'Terra da Gente' }), el('div', { class: 'rule' }),
         el('p', { class: 'eyebrow', text: actTitle }), el('p', { class: 'sub', text: 'Conteúdo em preparação. Volte em instantes.' })], -1);
@@ -225,7 +225,7 @@
       el('button', { class: 'key space', text: 'Espaço', onclick: function () { add(' '); } }),
       startB
     ]);
-    startB.addEventListener('click', function () { if (!startB.disabled) { player = name.replace(/\s+/g, ' ').trim(); rulesScreen(); } });
+    startB.addEventListener('click', function () { if (!startB.disabled) { player = name.replace(/\s+/g, ' ').trim(); if (ACT === 'ribeirao') phoneScreen(); else rulesScreen(); } });
     render([
       el('div', { class: 'top' }, [el('img', { class: 'mini', src: 'img/logo.png', alt: '' }), el('div', { class: 'progress' }, [el('span', { text: q.title })])]),
       el('p', { class: 'eyebrow', text: 'Quem vai jogar?' }), disp, el('div', { class: 'kb' }, rows.concat([tools]))
@@ -236,6 +236,51 @@
       if (k === 8) { del(); e.preventDefault(); return true; }
       if (k === 32) { add(' '); e.preventDefault(); return true; }
       if (c.length === 1 && /[A-Za-zÀ-ÿ0-9]/.test(c)) { add(c.toUpperCase()); e.preventDefault(); return true; }
+      return false;
+    };
+  }
+
+  // Ribeirao: telefone opcional para avisar quem ficar entre os 5 primeiros. So o admin enxerga; exige o aceite.
+  function phoneScreen() {
+    var digits = '', agreed = false;
+    var disp = el('div', { class: 'namebox phonebox' });
+    var goB = el('button', { class: 'go', text: 'Continuar' });
+    var box = el('span', { class: 'cbox' });
+    var agree = el('button', { class: 'agree', type: 'button' }, [box, el('span', { text: 'Concordo em informar meu telefone para esse contato.' })]);
+    function fmtPhone(d) {
+      if (!d) return '';
+      var r = '(' + d.slice(0, 2);
+      if (d.length > 2) r += ') ' + d.slice(2, d.length > 10 ? 7 : 6);
+      if (d.length > (d.length > 10 ? 7 : 6)) r += '-' + d.slice(d.length > 10 ? 7 : 6);
+      return r;
+    }
+    function paint() {
+      disp.innerHTML = '';
+      disp.appendChild(digits ? el('span', { text: fmtPhone(digits) }) : el('span', { class: 'ph', text: '(00) 00000-0000' }));
+      disp.appendChild(el('i', { class: 'caret' }));
+      agree.className = 'agree' + (agreed ? ' on' : '');
+      goB.disabled = !((digits.length === 10 || digits.length === 11) && agreed);
+    }
+    function add(ch) { if (digits.length < 11) { digits += ch; paint(); } }
+    function del() { digits = digits.slice(0, -1); paint(); }
+    agree.addEventListener('click', function () { agreed = !agreed; paint(); });
+    goB.addEventListener('click', function () { if (!goB.disabled) { playerPhone = digits; rulesScreen(); } });
+    var rows = ['123', '456', '789'].map(function (r) {
+      return el('div', { class: 'krow' }, r.split('').map(function (ch) { return el('button', { class: 'key', text: ch, onclick: function () { add(ch); } }); }));
+    });
+    rows.push(el('div', { class: 'krow' }, [el('button', { class: 'key wide', text: 'Apagar', onclick: del }), el('button', { class: 'key', text: '0', onclick: function () { add('0'); } }), goB]));
+    render([
+      el('div', { class: 'top' }, [el('img', { class: 'mini', src: 'img/logo.png', alt: '' }), el('div', { class: 'progress' }, [el('span', { text: quiz.title })])]),
+      el('p', { class: 'eyebrow', text: 'Seu telefone (WhatsApp)' }),
+      el('p', { class: 'consent', text: 'Se você ficar entre os 5 primeiros do ranking, vamos avisar por este número e você ganhará um brinde exclusivo. Seu telefone não será compartilhado com mais ninguém.' }),
+      disp, agree, el('div', { class: 'kb phonekb' }, rows),
+      el('button', { class: 'ghost skip', text: 'Jogar sem informar telefone', onclick: function () { playerPhone = ''; rulesScreen(); } })
+    ], 0);
+    paint();
+    onKey = function (e) {
+      var k = e.keyCode, c = e.key || '';
+      if (k === 8) { del(); e.preventDefault(); return true; }
+      if (c.length === 1 && /[0-9]/.test(c)) { add(c); e.preventDefault(); return true; }
       return false;
     };
   }
@@ -518,7 +563,7 @@
       myId = mine.id; rankBtn.disabled = false;
       rankLine.textContent = 'Você está em ' + mine.rank + 'º lugar entre ' + mine.players + ' jogador' + (mine.players > 1 ? 'es' : '') + ' neste tablet.';
     }
-    ajax('POST', 'api/score', { quizId: thisQuiz.id, name: player, points: pts, correct: correct, total: total, ms: Math.round(spent) }, function (r) {
+    ajax('POST', 'api/score', { quizId: thisQuiz.id, name: player, phone: playerPhone || undefined, consent: playerPhone ? true : undefined, points: pts, correct: correct, total: total, ms: Math.round(spent) }, function (r) {
       if (LOCALRANK || !rankLine.parentNode) return;      // no modo local a tela ja mostra a posicao do tablet; o envio segue so para o registro central
       if (r && r.queued) { rankLine.textContent = 'Sem internet: sua pontuação foi guardada e será enviada depois.'; }
       else if (r) { myId = r.id; rankLine.textContent = r.rank ? 'Você está em ' + r.rank + 'º lugar entre ' + r.players + ' jogador' + (r.players > 1 ? 'es' : '') : 'Pontuação registrada.'; rankBtn.disabled = false; }
