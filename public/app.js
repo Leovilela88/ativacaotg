@@ -8,7 +8,10 @@
   if (/\./.test(seg)) seg = '';   // ex.: /index.html nao e uma ativacao
   var ACT = (seg || (/[?&]a=([a-z0-9-]+)/.exec(location.search) || [])[1] || '').toLowerCase();
   var actTitle = '';
-  var PROXY = ACT === 'projeta' && !/[?&]proxy=0/.test(location.search);
+  // App instalado (janela propria, sem barra do navegador). Em Ribeirao o modo offline e o ranking local so valem instalado.
+  var STANDALONE = (window.matchMedia && (matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: minimal-ui)').matches)) || window.navigator.standalone === true;
+  var OFFLINE_ACT = ACT === 'projeta' || (ACT === 'ribeirao' && STANDALONE);
+  var PROXY = OFFLINE_ACT && !/[?&]proxy=0/.test(location.search);
   var player = '', idleTimer = null, tick = null, onKey = null, screenToken = 0; var playerPhone = '';
 
   // ---------- helpers ----------
@@ -76,7 +79,7 @@
   // ---------- ranking LOCAL (so /projeta): cada tablet guarda o proprio ranking, sem depender de internet ----------
   // As pontuacoes seguem para o servidor em segundo plano (e, sem internet, para a fila do service worker); a tela usa so o ranking local.
   // /projeta?ranking=central volta ao ranking do servidor; /projeta?ranking=zerar apaga o ranking deste tablet.
-  var LOCALRANK = ACT === 'projeta' && !/[?&]ranking=central/.test(location.search);
+  var LOCALRANK = OFFLINE_ACT && !/[?&]ranking=central/.test(location.search);
   var memRank = {};
   function lrKey(qid) { return 'tg-rank-' + ACT + '-' + qid; }
   function lrLoad(qid) { try { var j = localStorage.getItem(lrKey(qid)); return j ? JSON.parse(j) : []; } catch (e) { return memRank[qid] || []; } }
@@ -561,7 +564,7 @@
     if (LOCALRANK) {
       var mine = lrAdd(thisQuiz.id, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: player, points: pts, correct: correct, total: total, ms: Math.round(spent), at: Date.now() });
       myId = mine.id; rankBtn.disabled = false;
-      rankLine.textContent = 'Você está em ' + mine.rank + 'º lugar entre ' + mine.players + ' jogador' + (mine.players > 1 ? 'es' : '') + ' neste tablet.';
+      rankLine.textContent = 'Você está em ' + mine.rank + 'º lugar entre ' + mine.players + ' jogador' + (mine.players > 1 ? 'es' : '') + (ACT === 'projeta' ? ' neste tablet.' : '.');
     }
     ajax('POST', 'api/score', { quizId: thisQuiz.id, name: player, phone: playerPhone || undefined, consent: playerPhone ? true : undefined, points: pts, correct: correct, total: total, ms: Math.round(spent) }, function (r) {
       if (LOCALRANK || !rankLine.parentNode) return;      // no modo local a tela ja mostra a posicao do tablet; o envio segue so para o registro central
@@ -573,7 +576,7 @@
 
   function rankingScreen(quizId, highlight) {
     var id = quizId || (data.quizzes[0] && data.quizzes[0].id) || '';
-    var title = LOCALRANK ? 'Ranking deste tablet' : 'Ranking';
+    var title = LOCALRANK && ACT === 'projeta' ? 'Ranking deste tablet' : 'Ranking';
     function draw(r) {
       if (!r) { render([top(false), el('p', { class: 'eyebrow', text: title }), el('p', { class: 'sub', text: 'Ranking indisponível sem internet.' }), el('div', { class: 'actions' }, [el('button', { text: 'Voltar', onclick: home })])]); return; }
       var all = (r && r.ranking) || {};
@@ -709,7 +712,7 @@
     return Object.keys(out).map(function (u) { return new URL(u, location.href).href; });
   }
   function offlineSetup() {
-    if (ACT !== 'projeta' || !('serviceWorker' in navigator)) return;
+    if (!(ACT === 'projeta' || (ACT === 'ribeirao' && (STANDALONE || /[?&]sw=(on|off)/.test(location.search)))) || !('serviceWorker' in navigator)) return;
     if (/[?&]sw=on/.test(location.search)) { try { localStorage.removeItem('swoff'); } catch (e) {} location.replace(location.pathname); return; }
     var swOff = false; try { swOff = localStorage.getItem('swoff') === '1'; } catch (e) {}
     if (/[?&]sw=off/.test(location.search)) {
@@ -728,7 +731,7 @@
         else offSay(m.total ? 'Pronto para uso offline' : '', 'ok', 5000);
       }
     });
-    navigator.serviceWorker.register('/projeta/sw.js', { scope: '/projeta' }).then(function () { return navigator.serviceWorker.ready; }).then(function (reg) {
+    navigator.serviceWorker.register('/' + ACT + '/sw.js', { scope: '/' + ACT }).then(function () { return navigator.serviceWorker.ready; }).then(function (reg) {
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}   // pede para o navegador nao apagar
       var urls = mediaList();
       if (reg.active) { reg.active.postMessage({ type: 'precache', urls: urls }); reg.active.postMessage({ type: 'flush' }); }
